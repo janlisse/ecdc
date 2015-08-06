@@ -1,0 +1,3 @@
+GET         /taskdef/:cluster/:service/:version  controllers.DeployController.getTaskdef(cluster: model.Cluster, service: model.Service, version: model.Version)
+POST        /deploy/:cluster/:service/:version   controllers.DeployController.deployService(cluster: model.Cluster, service: model.Service, version: model.Version)
+POST        /deploy/:cluster/:service            controllers.DeployController.deployLatestService(cluster: model.Cluster, service: model.Service)
