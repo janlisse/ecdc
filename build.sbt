@@ -1,6 +1,10 @@
-name := """ecdc"""
+name := "ecdc"
+version := "0.1.0-SNAPSHOT"
+scalaVersion := "2.11.7"
 
-lazy val root = (project in file(".")).enablePlugins(PlayScala).settings(Common.settings: _*)
+lazy val root = (project in file("."))
+  .enablePlugins(PlayScala)
+  .disablePlugins(PlayLayoutPlugin)
 
 libraryDependencies ++= Seq(
   "org.bouncycastle" % "bcprov-jdk15on" % "1.52",
