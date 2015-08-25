@@ -1,0 +1,3 @@
+GET         /taskdef/:cluster/:service/:version  ecdc.api.DeployController.getTaskdef(cluster: model.Cluster, service: model.Service, version: model.Version)
+POST        /deploy/:cluster/:service/:version   ecdc.api.DeployController.deployService(cluster: model.Cluster, service: model.Service, version: model.Version)
+POST        /deploy/:cluster/:service            ecdc.api.DeployController.deployLatestService(cluster: model.Cluster, service: model.Service)
