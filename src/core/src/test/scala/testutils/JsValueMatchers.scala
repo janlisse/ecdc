@@ -32,9 +32,9 @@ trait JsValueMatchers {
 
   class Pretty(failure: ⇒ String, negFailure: ⇒ String) extends Prettifier {
     override def apply(a: Any): String = a match {
-      case "failure"                   ⇒ failure
-      case "negatedFailure"            ⇒ negFailure
-      case "midSentenceFailure"        ⇒ failure
+      case "failure" ⇒ failure
+      case "negatedFailure" ⇒ negFailure
+      case "midSentenceFailure" ⇒ failure
       case "midSentenceNegatedFailure" ⇒ negFailure
     }
   }
@@ -45,22 +45,22 @@ trait JsValueMatchers {
 
   def findResource(s: String) = Option(getClass getResource s) match {
     case Some(r) ⇒ r
-    case _       ⇒ throw new IllegalArgumentException(s"could not find $s")
+    case _ ⇒ throw new IllegalArgumentException(s"could not find $s")
   }
 
   def asJson(res: String) = Json parse (Source fromURL findResource(s"/$res")).mkString
 
   def diff(left: JsValue, right: JsValue, root: List[String] = Nil, acc: List[String] = Nil): List[String] = (left, right) match {
-    case (JsNull, JsNull)                           ⇒ acc
+    case (JsNull, JsNull) ⇒ acc
     case (JsBoolean(a), JsBoolean(b)) if a equals b ⇒ acc
-    case (JsBoolean(a), JsBoolean(b))               ⇒ toString((root, a, b)) :: acc
-    case (JsNumber(a), JsNumber(b)) if a equals b   ⇒ acc
-    case (JsNumber(a), JsNumber(b))                 ⇒ toString((root, a, b)) :: acc
-    case (JsString(a), JsString(b)) if a equals b   ⇒ acc
-    case (JsString(a), JsString(b))                 ⇒ toString((root, a, b)) :: acc
-    case (JsArray(a), JsArray(b))                   ⇒ diffJsValues(a, b, root)
-    case (JsObject(a), JsObject(b))                 ⇒ diffJsObjects(a.seq.toSeq, b.seq.toSeq, root)
-    case (a, b)                                     ⇒ toString((root, a, b)) :: acc
+    case (JsBoolean(a), JsBoolean(b)) ⇒ toString((root, a, b)) :: acc
+    case (JsNumber(a), JsNumber(b)) if a equals b ⇒ acc
+    case (JsNumber(a), JsNumber(b)) ⇒ toString((root, a, b)) :: acc
+    case (JsString(a), JsString(b)) if a equals b ⇒ acc
+    case (JsString(a), JsString(b)) ⇒ toString((root, a, b)) :: acc
+    case (JsArray(a), JsArray(b)) ⇒ diffJsValues(a, b, root)
+    case (JsObject(a), JsObject(b)) ⇒ diffJsObjects(a.seq.toSeq, b.seq.toSeq, root)
+    case (a, b) ⇒ toString((root, a, b)) :: acc
   }
 
   def diffJsObjects(a: Seq[(String, JsValue)], b: Seq[(String, JsValue)], root: List[String] = Nil, acc: List[String] = Nil): List[String] = {
@@ -96,7 +96,7 @@ trait JsValueMatchers {
 
   def toString(t: (List[String], Any, Any)) = t match {
     case (Nil, a, b) ⇒ s"'$a' was not '$b'"
-    case (xs, a, b)  ⇒ xs.mkString(".") + s": '$a' was not '$b'"
+    case (xs, a, b) ⇒ xs.mkString(".") + s": '$a' was not '$b'"
   }
 }
 
@@ -104,7 +104,7 @@ object JsValueMatchers extends JsValueMatchers {
   private implicit class JsonAwareList(xs: List[String]) {
     def jsonString = xs match {
       case Nil ⇒ "'root'"
-      case _   ⇒ xs.mkString(".")
+      case _ ⇒ xs.mkString(".")
     }
   }
 }

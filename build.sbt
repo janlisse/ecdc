@@ -22,6 +22,10 @@ lazy val commonSettings = Seq(
 lazy val root = project.in(file("."))
   .aggregate(api, core, `aws-s3`, `aws-ecs`, crypto, git)
 
+lazy val cli = project.in(file("src/cli"))
+  .dependsOn(core, crypto)
+  .settings(commonSettings: _*)
+
 lazy val api = project.in(file("src/api"))
   .dependsOn(core, `aws-s3`, `aws-ecs`, crypto, git)
   .settings(commonSettings: _*)

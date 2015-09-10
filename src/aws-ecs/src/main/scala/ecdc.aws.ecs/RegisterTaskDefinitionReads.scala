@@ -60,5 +60,4 @@ object RegisterTaskDefinitionReads {
       rtdr.setContainerDefinitions(cds.asJava)
       rtdr
     })
-
 }

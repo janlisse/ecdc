@@ -1,3 +1,5 @@
+package ecdc.api
+
 import model.{ Version, Service, Cluster }
 import play.api.mvc.PathBindable
 

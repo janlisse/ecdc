@@ -1,17 +1,16 @@
 package ecdc.api
 
 import akka.actor.ActorSystem
-import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
-import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.auth.{ AWSCredentials, BasicAWSCredentials }
+import com.amazonaws.regions.{ Region, Regions }
 import com.amazonaws.services.ecs.AmazonECSAsyncClient
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingAsyncClient
 import com.amazonaws.services.s3.AmazonS3EncryptionClient
-import com.amazonaws.services.s3.model.{CryptoConfiguration, KMSEncryptionMaterialsProvider}
-import config.{FileSystemTaskDefinitionResolver, TaskDefinitionResolver}
-import ecdc.api.DeployController
+import com.amazonaws.services.s3.model.{ CryptoConfiguration, KMSEncryptionMaterialsProvider }
+import config.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
 import ecdc.aws.ecs.EcsClient
 import ecdc.aws.s3.S3EncryptedKeyProvider
-import ecdc.crypto.{CmsDecryptor, SecretKeyProvider}
+import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider }
 import ecdc.git.GitActor
 import scaldi.Module
 import scaldi.akka.AkkaInjectable._

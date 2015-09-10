@@ -6,17 +6,17 @@ import java.util.Locale
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
-import com.amazonaws.services.ecs.model.{Service => _, _}
+import com.amazonaws.services.ecs.model.{ Service => _, _ }
 import config.TaskDefinitionResolver
+import ecdc.api.DeployController._
 import ecdc.aws.ecs.EcsClient
-import ecdc.git.GitActor.{Update, UpdateDone}
-import model.{Cluster, Deployment, Service, Version}
+import ecdc.git.GitActor.{ Update, UpdateDone }
+import model.{ Cluster, Deployment, Service, Version }
 import org.slf4j.LoggerFactory
 import play.api.http.MimeTypes
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
-
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
