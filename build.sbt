@@ -52,9 +52,8 @@ lazy val core = project.in(file("src/core"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-   //   "oncue.knobs" %% "core" % "3.3.0",
-   //   "org.scalaz" %% "scalaz-core" % "7.1.3",
       "com.typesafe.play" % "play-json_2.11" % "2.4.2",
+      "org.json4s" %% "json4s-native" % "3.3.0.RC6",
       "org.slf4j" % "slf4j-api" % "1.7.12",
       "org.scalatest" %% "scalatest" % "2.2.5" % "test",
       "org.mockito" % "mockito-all" % "1.10.19" % "test"
