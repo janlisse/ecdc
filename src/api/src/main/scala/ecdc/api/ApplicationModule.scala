@@ -32,7 +32,7 @@ class ApplicationModule extends Module {
     inject[AmazonElasticLoadBalancingAsyncClient]
   )
 
-  bind[ActorSystem] to ActorSystem("ECDC") destroyWith (_.shutdown())
+  bind[ActorSystem] to ActorSystem("ECDC") destroyWith (_.terminate())
 
   binding toProvider new GitActor(
     inject[String](identified by "git.repoUri"),

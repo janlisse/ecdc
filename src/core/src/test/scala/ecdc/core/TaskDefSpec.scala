@@ -30,7 +30,7 @@ class TaskDefSpec extends FlatSpec with ShouldMatchers {
     )) shouldBe """{"family":"abcFamily","containerDefinitions":[{"name":"abcName","image":"quay.io/imageName:latest","cpu":5,"memory":1024,"links":["link"],"portMappings":[{"containerPort":80,"hostPort":9000,"protocol":"udp"}],"essential":false,"entryPoint":["/bin/entrypoint"],"command":["cmd"],"environment":[{"name":"PATH","value":"/bin"}],"mountPoints":[{"sourceVolume":"/source","containerPath":"/container","readOnly":true}],"volumesFrom":[{"sourceContainer":"container","readOnly":true}]}],"volumes":[{"name":"volumeName","host":{"sourcePath":"hostSourcePath"}}]}"""
   }
 
-  it should "serialize a small taskDef" in {
+  ignore should "serialize a small taskDef" in {
     write(TaskDef(
       family = "123Family",
       containerDefinitions = Seq(ContainerDefinition(

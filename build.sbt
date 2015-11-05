@@ -21,6 +21,7 @@ lazy val commonSettings = Seq(
 
 lazy val root = project.in(file("."))
   .aggregate(api, core, `aws-s3`, `aws-ecs`, crypto, git)
+  .settings(commonSettings: _*)
 
 lazy val cli = project.in(file("src/cli"))
   .dependsOn(core, crypto)
@@ -41,7 +42,7 @@ lazy val api = project.in(file("src/api"))
     packageName in Docker := "ecdc",
     libraryDependencies ++= Seq(
       "commons-codec" % "commons-codec" % "1.10",
-      "org.scaldi" %% "scaldi-play" % "0.5.8",
+      "org.scaldi" %% "scaldi-play" % "0.5.10",
       "org.scaldi" %% "scaldi-akka" % "0.5.6",
       "org.scalatest" %% "scalatest" % "2.2.5" % "test"
     )
@@ -52,8 +53,8 @@ lazy val core = project.in(file("src/core"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.typesafe.play" % "play-json_2.11" % "2.4.2",
-      "org.json4s" %% "json4s-native" % "3.3.0.RC6",
+      "com.typesafe.play" % "play-json_2.11" % "2.4.3",
+      "org.json4s" %% "json4s-native" % "3.3.0",
       "org.slf4j" % "slf4j-api" % "1.7.12",
       "org.scalatest" %% "scalatest" % "2.2.5" % "test",
       "org.mockito" % "mockito-all" % "1.10.19" % "test"
@@ -65,7 +66,7 @@ lazy val `aws-s3` = project.in(file("src/aws-s3"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-s3" % "1.10.10",
+      "com.amazonaws" % "aws-java-sdk-s3" % "1.10.32",
       "commons-io" % "commons-io" % "2.4"
     )
   )
@@ -74,9 +75,9 @@ lazy val `aws-ecs` = project.in(file("src/aws-ecs"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.10",
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.10",
-      "com.typesafe.play" %% "play-json" % "2.4.2"
+      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.32",
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.32",
+      "com.typesafe.play" %% "play-json" % "2.4.3"
     )
   )
 
@@ -84,8 +85,8 @@ lazy val crypto = project.in(file("src/crypto"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.bouncycastle" % "bcprov-jdk15on" % "1.52",
-      "org.bouncycastle" % "bcpkix-jdk15on" % "1.52"
+      "org.bouncycastle" % "bcprov-jdk15on" % "1.53",
+      "org.bouncycastle" % "bcpkix-jdk15on" % "1.53"
     )
   )
 
@@ -93,7 +94,7 @@ lazy val git = project.in(file("src/git"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "org.eclipse.jgit" % "org.eclipse.jgit" % "4.0.1.201506240215-r",
-      "com.typesafe.akka" %% "akka-actor" % "2.3.12"
+      "org.eclipse.jgit" % "org.eclipse.jgit" % "4.1.0.201509280440-r",
+      "com.typesafe.akka" %% "akka-actor" % "2.4.0"
     )
   )
