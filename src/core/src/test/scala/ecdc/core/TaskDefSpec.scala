@@ -1,16 +1,16 @@
 package ecdc.core
 
+import testutils.Spec
 import ecdc.core.TaskDef.ContainerDefinition.Image
 import ecdc.core.TaskDef.PortMapping.Udp
-import org.scalatest.{ ShouldMatchers, FlatSpec }
-import org.json4s.native.Serialization.write
+import org.json4s.native.Serialization.writePretty
 import TaskDef._
 import TaskDef.Implicits._
 
-class TaskDefSpec extends FlatSpec with ShouldMatchers {
+class TaskDefSpec extends Spec {
 
-  it should "serialize a complete taskDef" in {
-    write(TaskDef(
+  it should "serialize a complete taskdef" in {
+    writePretty(TaskDef(
       family = "abcFamily",
       containerDefinitions = Seq(ContainerDefinition(
         name = "abcName",
@@ -27,17 +27,17 @@ class TaskDefSpec extends FlatSpec with ShouldMatchers {
         volumesFrom = Seq(VolumeFrom(sourceContainer = "container", readOnly = true))
       )),
       volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath")))))
-    )) shouldBe """{"family":"abcFamily","containerDefinitions":[{"name":"abcName","image":"quay.io/imageName:latest","cpu":5,"memory":1024,"links":["link"],"portMappings":[{"containerPort":80,"hostPort":9000,"protocol":"udp"}],"essential":false,"entryPoint":["/bin/entrypoint"],"command":["cmd"],"environment":[{"name":"PATH","value":"/bin"}],"mountPoints":[{"sourceVolume":"/source","containerPath":"/container","readOnly":true}],"volumesFrom":[{"sourceContainer":"container","readOnly":true}]}],"volumes":[{"name":"volumeName","host":{"sourcePath":"hostSourcePath"}}]}"""
+    )) + "\n" shouldBe readFile("/ecdc/core/taskdef.complete.json").mkString
   }
 
-  ignore should "serialize a small taskDef" in {
-    write(TaskDef(
+  it should "serialize a minimal taskdef" in {
+    writePretty(TaskDef(
       family = "123Family",
       containerDefinitions = Seq(ContainerDefinition(
         name = "123Name",
         image = Image(name = "anotherImage", tag = "1.1"),
         memory = 512
       ))
-    )) shouldBe """{"family":"123Family","containerDefinitions":[{"name":"123Name","image":"anotherImage:1.1","memory":512,"essential":true}]}"""
+    )) + "\n" shouldBe readFile("/ecdc/core/taskdef.minimal.json").mkString
   }
 }

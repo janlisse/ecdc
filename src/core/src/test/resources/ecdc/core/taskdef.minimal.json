@@ -1,0 +1,11 @@
+{
+  "family":"123Family",
+  "containerDefinitions":[
+    {
+      "name":"123Name",
+      "image":"anotherImage:1.1",
+      "memory":512,
+      "essential":true
+    }
+  ]
+}

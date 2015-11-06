@@ -1,8 +1,7 @@
 package ecdc.core
 
-import org.json4s.DefaultFormats
-import org.json4s.CustomSerializer
-import org.json4s.JsonAST.JString
+import org.json4s._
+import org.json4s.JsonAST.{ JNothing, JString }
 import TaskDef._
 
 case class TaskDef(
@@ -15,8 +14,28 @@ object TaskDef {
   import ContainerDefinition._
   import PortMapping._
 
+  private object SeqSerializer extends Serializer[Seq[_]] {
+    def deserialize(implicit format: Formats) = {
+      case (TypeInfo(clazz, ptype), json) if classOf[Seq[_]].isAssignableFrom(clazz) => json match {
+        case JArray(xs) =>
+          val t = ptype.getOrElse(throw new MappingException("parameterized type not known"))
+          xs.map(x => Extraction.extract(x, TypeInfo(t.getActualTypeArguments()(0).asInstanceOf[Class[_]], None))).toSeq
+        case x => throw new MappingException(s"Can't convert $x to Seq")
+      }
+    }
+
+    def serialize(implicit format: Formats) = {
+      case i: Seq[_] if i.isEmpty => JNothing
+      case i: Seq[_] => JArray(i.map(Extraction.decompose).toList)
+    }
+  }
+
+  private object TaskDefFormats extends DefaultFormats {
+    override val customSerializers: List[Serializer[_]] = List(SeqSerializer)
+  }
+
   object Implicits {
-    implicit val formats = DefaultFormats + Protocol.Formats + Image.Formats
+    implicit val formats = TaskDefFormats + Protocol.Formats + Image.Formats
   }
 
   case class ContainerDefinition(
