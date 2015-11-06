@@ -22,12 +22,12 @@ object VariableResolver extends Arm {
   }
 
   def resolveVariables(baseDir: File, traits: Seq[ServiceTrait], cluster: Cluster): Set[Variable] = {
-    traits.map {
+    traits.flatMap {
       t =>
         val path = s"trait/${t.name}/cluster/${cluster.name}/var"
         val dir = new File(baseDir, path)
         Option(dir.list()).map(_.toSeq).getOrElse(Seq()).map(file => toVariable(new File(dir, file), path))
-    }.flatten.toSet
+    }.toSet
   }
 
   private def toVariable(file: File, path: String): Variable = {
