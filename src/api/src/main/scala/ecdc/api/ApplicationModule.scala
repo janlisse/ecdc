@@ -1,6 +1,5 @@
 package ecdc.api
 
-import akka.actor.ActorSystem
 import com.amazonaws.auth.{ AWSCredentials, BasicAWSCredentials }
 import com.amazonaws.regions.{ Region, Regions }
 import com.amazonaws.services.ecs.AmazonECSAsyncClient
@@ -11,13 +10,11 @@ import config.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
 import ecdc.aws.ecs.EcsClient
 import ecdc.aws.s3.S3EncryptedKeyProvider
 import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider }
-import ecdc.git.GitActor
+import ecdc.git.Git.{Password, User, RepoUri}
+import ecdc.git.Git
 import scaldi.Module
-import scaldi.akka.AkkaInjectable._
 
 class ApplicationModule extends Module {
-
-  implicit val system = inject[ActorSystem]
 
   bind[AmazonECSAsyncClient] to createEcsClient(
     inject[AWSCredentials]
@@ -32,18 +29,16 @@ class ApplicationModule extends Module {
     inject[AmazonElasticLoadBalancingAsyncClient]
   )
 
-  bind[ActorSystem] to ActorSystem("ECDC") destroyWith (_.terminate())
-
-  binding toProvider new GitActor(
-    inject[String](identified by "git.repoUri"),
-    inject[String](identified by "git.user"),
-    inject[String](identified by "git.password")
+  bind[Git] to Git(
+    RepoUri(inject[String](identified by "git.repoUri")),
+    User(inject[String](identified by "git.user")),
+    Password(inject[String](identified by "git.password"))
   )
 
   bind[DeployController] to new DeployController(
     inject[EcsClient],
     inject[TaskDefinitionResolver],
-    injectActorRef[GitActor]
+    inject[Git]
   )
 
   bind[SecretKeyProvider] to new S3EncryptedKeyProvider(

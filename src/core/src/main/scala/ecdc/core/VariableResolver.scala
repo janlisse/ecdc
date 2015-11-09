@@ -1,7 +1,7 @@
 package ecdc.core
 
 import config.Arm
-import ecdc.core.TraitReader.ServiceTrait
+import TraitReader.ServiceTrait
 import java.io.File
 import model.Cluster
 import scala.io.Source
@@ -26,9 +26,11 @@ object VariableResolver extends Arm {
       t =>
         val path = s"trait/${t.name}/cluster/${cluster.name}/var"
         val dir = new File(baseDir, path)
-        Option(dir.list()).map(_.toSeq).getOrElse(Seq()).map(file => toVariable(new File(dir, file), path))
+        ls(dir).map(file => toVariable(new File(dir, file), path))
     }.toSet
   }
+
+  private def ls(dir: File): Seq[String] = Option(dir.list()).map(_.toSeq).getOrElse(Seq())
 
   private def toVariable(file: File, path: String): Variable = {
     val value = using(Source.fromFile(file))(_.getLines.find(_ => true))

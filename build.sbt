@@ -43,7 +43,6 @@ lazy val api = project.in(file("src/api"))
     libraryDependencies ++= Seq(
       "commons-codec" % "commons-codec" % "1.10",
       "org.scaldi" %% "scaldi-play" % "0.5.10",
-      "org.scaldi" %% "scaldi-akka" % "0.5.6",
       "org.scalatest" %% "scalatest" % "2.2.5" % "test"
     )
   )

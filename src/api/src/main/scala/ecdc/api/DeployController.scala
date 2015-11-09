@@ -2,15 +2,12 @@ package ecdc.api
 
 import java.io.File
 import java.util.Locale
-
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.util.Timeout
 import com.amazonaws.services.ecs.model.{ Service => _, _ }
 import config.TaskDefinitionResolver
 import ecdc.api.DeployController._
 import ecdc.aws.ecs.EcsClient
-import ecdc.git.GitActor.{ Update, UpdateDone }
+import ecdc.git.Git
+import ecdc.git.Git.Timeout
 import model.{ Cluster, Deployment, Service, Version }
 import org.slf4j.LoggerFactory
 import play.api.http.MimeTypes
@@ -21,7 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Try
 
-class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResolver, gitActor: ActorRef) extends Controller {
+class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResolver, git: Git) extends Controller {
 
   val logger = LoggerFactory.getLogger(getClass)
 
@@ -55,11 +52,6 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     } yield Ok(s"${res.getService}.\n")
   }
 
-  private def gitUpdate(): Future[File] = {
-    implicit val timeout = Timeout(5.seconds)
-    (gitActor ? Update).mapTo[UpdateDone].map(_.baseDir)
-  }
-
   private def updateService(cluster: Cluster, service: Service, taskDefArn: String, desiredCount: Int): Future[UpdateServiceResult] = {
     val usr = new UpdateServiceRequest()
       .withCluster(cluster.name)
@@ -79,8 +71,9 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
   }
 
   private def resolveTaskDef(cluster: Cluster, application: Service, version: Version): Future[JsValue] = {
+    implicit val timeout = Timeout(5.seconds)
     for {
-      repoDir ← gitUpdate()
+      repoDir ← git.update()
       taskDef = getTaskDefJson(repoDir, application, cluster,
         Map(
           "BUILD_NUMBER" -> version.value,

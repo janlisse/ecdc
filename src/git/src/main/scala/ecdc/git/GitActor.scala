@@ -2,27 +2,28 @@ package ecdc.git
 
 import akka.actor.{ Actor, Props }
 import java.io.File
-import org.eclipse.jgit.api.Git
+import ecdc.git.Git._
+import org.eclipse.jgit.api.{ Git => JGit }
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import scala.language.postfixOps
 
-object GitActor {
-  def props = Props[GitActor]
+private[git] object GitActor {
+  def props(repoUri: RepoUri, user: User, password: Password) = Props(classOf[GitActor], repoUri, user, password)
   case object Update
   case class UpdateDone(baseDir: File)
 }
 
-class GitActor(repoUri: String, user: String, password: String) extends Actor {
+private[git] class GitActor(repoUri: RepoUri, user: User, password: Password) extends Actor {
 
   import GitActor._
 
-  var git: Option[Git] = None
+  var git: Option[JGit] = None
   var baseDir: File = _
-  val provider = new UsernamePasswordCredentialsProvider("user", "password")
+  val provider = new UsernamePasswordCredentialsProvider(user.value, password.value)
 
   override def receive = {
     case Update ⇒
-      if (git.isDefined) pull() else clone(repoUri)
+      if (git.isDefined) pull() else clone(repoUri.value)
       sender() ! UpdateDone(baseDir)
   }
 
@@ -35,7 +36,7 @@ class GitActor(repoUri: String, user: String, password: String) extends Actor {
     val localPath = File.createTempFile("ecdc-config", "")
     localPath.delete()
 
-    git = Some(Git.cloneRepository()
+    git = Some(JGit.cloneRepository()
       .setURI(repoUri)
       .setDirectory(localPath)
       .setCredentialsProvider(provider)
