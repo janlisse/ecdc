@@ -30,10 +30,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     request ⇒
       request.contentType.map(_.toLowerCase(Locale.ENGLISH)) match {
         case Some(MimeTypes.JSON) ⇒ BodyParsers.parse.json
-          .map(value ⇒ {
-            println(value)
-            jr.reads(value)
-          })
+          .map(jr.reads)
           .map(_.asOpt)
         case _ ⇒
           logger.debug("No Content-Type found. Using form parser.")
