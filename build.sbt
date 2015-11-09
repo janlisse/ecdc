@@ -94,6 +94,6 @@ lazy val git = project.in(file("src/git"))
   .settings(
     libraryDependencies ++= Seq(
       "org.eclipse.jgit" % "org.eclipse.jgit" % "4.1.0.201509280440-r",
-      "com.typesafe.akka" %% "akka-actor" % "2.4.0"
+      "com.typesafe.akka" %% "akka-actor" % "2.3.13"
     )
   )

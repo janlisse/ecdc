@@ -29,5 +29,5 @@ object Git {
   def apply(repoUri: RepoUri, user: User, password: Password): Git =
     new Git(system.actorOf(GitActor.props(repoUri, user, password)))
 
-  def terminate()(implicit ec: ExecutionContext): Future[Unit] = system.terminate().map(_ => Unit)
+  def terminate()(implicit ec: ExecutionContext): Unit = system.shutdown()
 }
