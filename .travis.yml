@@ -9,5 +9,4 @@ jdk:
 before_script:
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
-  - sbt clean test compile
-  - sbt docker:publish
+  - sbt clean test compile docker:publish -Dversion=$TRAVIS_BUILD_NUMBER.$TRAVIS_COMMIT

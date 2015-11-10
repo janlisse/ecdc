@@ -9,7 +9,7 @@ lazy val commonSettings = Seq(
   resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
   resolvers += "oncue-bintray" at "http://dl.bintray.com/oncue/releases",
   organization := "com.github.janlisse",
-  version := "0.1.0-SNAPSHOT",
+  version := sys.props.getOrElse("version", default = "0"),
   scalaVersion := "2.11.7",
   ScalariformKeys.preferences := ScalariformKeys.preferences.value
     .setPreference(AlignParameters, true)
@@ -39,7 +39,7 @@ lazy val api = project.in(file("src/api"))
     dockerEntrypoint := Seq("bin/ecdc"),
     dockerBaseImage := "janlisse/java-8-server",
     dockerUpdateLatest := true,
-    packageName in Docker := "ecdc",
+    packageName in Docker := "janlisse/ecdc",
     libraryDependencies ++= Seq(
       "commons-codec" % "commons-codec" % "1.10",
       "org.scaldi" %% "scaldi-play" % "0.5.10",
