@@ -10,4 +10,4 @@ before_script:
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
   - sbt clean test compile
-  - sbt docker publish
+  - sbt docker:publish
