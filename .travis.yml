@@ -3,3 +3,8 @@ scala:
    - 2.11.7
 jdk:
   - oraclejdk8
+before_install:
+  - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+script:
+  - sbt clean test compile
+  - sbt docker publish
