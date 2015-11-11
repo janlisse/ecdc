@@ -36,7 +36,6 @@ lazy val api = project.in(file("src/api"))
     routesImport += "ecdc.api.bindables._",
     routesGenerator := InjectedRoutesGenerator,
     dockerExposedPorts := Seq(9000),
-    dockerEntrypoint := Seq("bin/ecdc"),
     dockerBaseImage := "janlisse/java-8-server",
     dockerUpdateLatest := true,
     packageName in Docker := "janlisse/ecdc",
