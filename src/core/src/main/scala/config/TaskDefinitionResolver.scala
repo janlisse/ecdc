@@ -1,13 +1,19 @@
 package config
 
+import com.typesafe.config.{ConfigValue, ConfigFactory}
+import ecdc.core.TaskDef.ContainerDefinition.Image
+import ecdc.core.TaskDef.{Environment, ContainerDefinition}
+import ecdc.core.{TraitReader, VariableResolver, TaskDef}
 import ecdc.crypto.{ CmsDecryptor, EncryptionType }
 import java.io.File
-import model.Cluster
+import model.{ Version, Service, Cluster }
 import org.slf4j.LoggerFactory
 import play.api.libs.json.{ Json, JsObject }
+import scala.concurrent.{ ExecutionContext, Future }
 import scala.io.Source
 import scala.language.reflectiveCalls
 import scala.util.{ Success, Failure, Try }
+import scala.collection.JavaConverters._
 import TaskDefinitionResolver._
 
 trait Arm {
@@ -64,6 +70,11 @@ trait TaskDefinitionResolver {
   def resolve(baseDir: File, app: String, env: Cluster,
     additionalVars: Map[String, String],
     taskdefFileName: String = "taskdef.json"): Either[Seq[Error], JsObject]
+
+  def resolve(baseDir: File, cluster: Cluster, service: Service, version: Version)(implicit ec: ExecutionContext): Future[TaskDef]
+  // VERSION
+  // CLUSTER
+  // SERVICE as env-vars
 }
 
 object TaskDefinitionResolver {
@@ -141,5 +152,32 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
   private def toVariable(dir: File, s: String): Variable = {
     val v = new File(dir, s)
     Variable(v.getName, v)
+  }
+
+  override def resolve(
+    baseDir: File,
+    cluster: Cluster,
+    service: Service,
+    version: Version)(implicit ec: ExecutionContext): Future[TaskDef] = {
+
+    val serviceConf = baseDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
+    val serviceTraits = TraitReader.readTraits(serviceConf)
+    val vars = VariableResolver.resolveVariables(baseDir, serviceTraits, cluster) // TODO decrypt value
+    val conf = ConfigFactory.parseFile(serviceConf).resolveWith(
+      ConfigFactory.parseMap(vars.map(v => (v.name, v.value)).toMap.asJava, "config variables")
+    )
+    val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
+      name = service.name,
+      image = Image(???, service.name, ???),
+      cpu = ???,
+      memory = ???,
+      portMappings = ???,
+      essential = true,
+      entryPoint = ???,
+      command = ???,
+      environment = vars.map(v => Environment(v.name, v.value)).toSeq,
+      mountPoints = ???
+    ))
+    Future.successful(TaskDef(service.name, containerDefinitions, ???))
   }
 }

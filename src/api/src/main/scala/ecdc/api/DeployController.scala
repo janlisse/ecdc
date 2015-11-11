@@ -1,11 +1,10 @@
 package ecdc.api
 
-import java.io.File
 import java.util.Locale
 import com.amazonaws.services.ecs.model.{ Service => _, _ }
 import config.TaskDefinitionResolver
-import ecdc.api.DeployController._
 import ecdc.aws.ecs.EcsClient
+import ecdc.core.TaskDef
 import ecdc.git.Git
 import ecdc.git.Git.Timeout
 import model.{ Cluster, Deployment, Service, Version }
@@ -14,16 +13,24 @@ import play.api.http.MimeTypes
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json._
 import play.api.mvc._
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.language.implicitConversions
 import scala.util.Try
+import DeployController._
+import scala.collection.JavaConversions._
 
 class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResolver, git: Git) extends Controller {
 
   val logger = LoggerFactory.getLogger(getClass)
+  implicit val timeout = Timeout(5.seconds)
 
-  def getTaskdef(cluster: Cluster, application: Service, version: Version) = Action.async {
-    resolveTaskDef(cluster, application, version).map(taskDef ⇒ Ok(Json toJson taskDef))
+  def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
+    for {
+      repoDir <- git.update()
+      taskDef <- configResolver.resolve(repoDir, cluster, service, version)
+    } yield {
+      Ok(taskDef.toJson)
+    }
   }
 
   def jsonOrForm[T](implicit jr: Reads[T], fr: FormReads[T]): BodyParser[Option[T]] = parse.using {
@@ -40,59 +47,90 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
 
   def deployLatestService(c: Cluster, a: Service) = deployService(c, a, Version.latest)
 
-  def deployService(c: Cluster, a: Service, v: Version) = Action.async(jsonOrForm[Int](desiredCountJsonReads, desiredCountFormReads)) { req ⇒
+  def deployService(c: Cluster, a: Service, v: Version) = Action.async(jsonOrForm[Int]) { req ⇒
     val deployRequest = Deployment(c, a, v, req.body)
     import deployRequest._
     for {
-      taskDefArn ← registerTaskDef(service, cluster, version)
-      res ← updateService(cluster, service, taskDefArn, desiredCount.getOrElse(1))
+      repoDir <- git.update()
+      taskDef <- configResolver.resolve(repoDir, cluster, service, version)
+      taskDefArn ← ecsClient.registerTaskDef(taskDef)
+      res ← ecsClient.updateService((taskDefArn, cluster, service, desiredCount.getOrElse(1)))
     } yield Ok(s"${res.getService}.\n")
-  }
-
-  private def updateService(cluster: Cluster, service: Service, taskDefArn: String, desiredCount: Int): Future[UpdateServiceResult] = {
-    val usr = new UpdateServiceRequest()
-      .withCluster(cluster.name)
-      .withService(service.name)
-      .withTaskDefinition(taskDefArn)
-      .withDesiredCount(desiredCount)
-    ecsClient.updateService(usr)
-  }
-
-  private def registerTaskDef(application: Service, environment: Cluster, version: Version): Future[String] = {
-    import ecdc.aws.ecs.RegisterTaskDefinitionReads._
-    for {
-      taskDef ← resolveTaskDef(environment, application, version)
-      taskDefRequest = taskDef.as[RegisterTaskDefinitionRequest]
-      regResult ← ecsClient.registerTaskDef(taskDefRequest)
-    } yield regResult.getTaskDefinition.getTaskDefinitionArn
-  }
-
-  private def resolveTaskDef(cluster: Cluster, application: Service, version: Version): Future[JsValue] = {
-    implicit val timeout = Timeout(5.seconds)
-    for {
-      repoDir ← git.update()
-      taskDef = getTaskDefJson(repoDir, application, cluster,
-        Map(
-          "BUILD_NUMBER" -> version.value,
-          "SERVICE" -> application.name,
-          "CLUSTER" -> cluster.name))
-    } yield taskDef
-  }
-
-  private def getTaskDefJson(baseDir: File, app: Service, env: Cluster,
-    additionalVars: Map[String, String]): JsValue = {
-    logger.info(s"Resolve taskdef from repoDir: $baseDir")
-    configResolver.resolve(baseDir, app.name, env, additionalVars).fold(
-      err ⇒ throw new IllegalArgumentException(s"Error resolving taskdef for app ${app.name} and cluster ${env.name}: $err"),
-      x ⇒ x
-    )
   }
 }
 
 object DeployController {
 
-  val desiredCountJsonReads: Reads[Int] = (__ \ 'desiredCount).read[Int]
-  val desiredCountFormReads: FormReads[Int] = new FormReads[Int] {
+  case class Arn(value: String) extends AnyVal
+
+  implicit def tupleToUpdateRequest(t: (RegisterTaskDefinitionResult, Cluster, Service, Int)): UpdateServiceRequest =
+    new UpdateServiceRequest()
+      .withTaskDefinition(t._1.getTaskDefinition.getTaskDefinitionArn)
+      .withCluster(t._2.name)
+      .withService(t._3.name)
+      .withDesiredCount(t._4)
+
+  implicit def taskdefToRequest(taskDef: TaskDef): RegisterTaskDefinitionRequest = {
+    implicit def toJava(o: Option[Int]): Integer = o match {
+      case Some(x) => x
+      case None => null
+    }
+    val res = new RegisterTaskDefinitionRequest()
+    res.withContainerDefinitions(taskDef.containerDefinitions.map(cd =>
+      new ContainerDefinition()
+        .withCommand(cd.command)
+        .withCpu(cd.cpu)
+        //.withDisableNetworking(???)
+        //.withDnsSearchDomains(???)
+        //.withDnsServers(???)
+        //.withDockerLabels(???)
+        //.withDockerSecurityOptions(???)
+        .withEntryPoint(cd.entryPoint)
+        .withEnvironment(cd.environment.map(e =>
+          new KeyValuePair()
+            .withName(e.name)
+            .withValue(e.value)
+        ))
+        .withEssential(cd.essential)
+        //.withExtraHosts(???)
+        //.withHostname(???)
+        .withImage(cd.image.toString)
+        //.withLinks(???)
+        //.withLogConfiguration(???)
+        .withMemory(cd.memory)
+        //.withMountPoints(???)
+        .withName(cd.name)
+        .withPortMappings(cd.portMappings.map(p =>
+          new PortMapping()
+            .withContainerPort(p.containerPort)
+            .withHostPort(p.hostPort)
+            .withProtocol(p.protocol.toString)
+        ))
+        //.withPrivileged(???)
+        //.withReadonlyRootFilesystem(???)
+        //.withUlimits()
+        //.withUser(???)
+        .withVolumesFrom(cd.volumesFrom.map(v =>
+          new VolumeFrom()
+            .withReadOnly(v.readOnly)
+            .withSourceContainer(v.sourceContainer)
+        ))
+    //.withWorkingDirectory(???)
+    ))
+    res.withFamily(taskDef.family)
+    res.withVolumes(taskDef.volumes.map(vol =>
+      new Volume()
+        .withHost(vol.host.map(h =>
+          new HostVolumeProperties()
+            .withSourcePath(h.sourcePath.orNull)
+        ).orNull)
+        .withName(vol.name)
+    ))
+  }
+
+  implicit val desiredCountJsonReads: Reads[Int] = (__ \ 'desiredCount).read[Int]
+
+  implicit val desiredCountFormReads: FormReads[Int] = new FormReads[Int] {
     override def reads(form: Map[String, Seq[String]]): Option[Int] = form.get("desiredCount")
       .flatMap(_.headOption)
       .flatMap(s ⇒ Try { s.toInt }.toOption)

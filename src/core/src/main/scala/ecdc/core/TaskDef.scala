@@ -3,11 +3,14 @@ package ecdc.core
 import org.json4s._
 import org.json4s.JsonAST.{ JNothing, JString }
 import TaskDef._
+import org.json4s.native.Serialization._
 
 case class TaskDef(
-  family: String,
-  containerDefinitions: Seq[ContainerDefinition],
-  volumes: Seq[Volume] = Nil)
+    family: String,
+    containerDefinitions: Seq[ContainerDefinition],
+    volumes: Seq[Volume] = Nil) {
+  def toJson: String = writePretty(this)(TaskDef.Implicits.formats)
+}
 
 object TaskDef {
 
@@ -66,12 +69,16 @@ object TaskDef {
     }
   }
 
-  case class PortMapping(containerPort: Int, hostPort: Option[Integer] = None, protocol: Protocol = Tcp)
+  case class PortMapping(containerPort: Int, hostPort: Option[Int] = None, protocol: Protocol = Tcp)
 
   object PortMapping {
     sealed trait Protocol
-    case object Tcp extends Protocol
-    case object Udp extends Protocol
+    case object Tcp extends Protocol {
+      override def toString: String = "tcp"
+    }
+    case object Udp extends Protocol {
+      override def toString: String = "udp"
+    }
 
     object Protocol {
       object Formats extends CustomSerializer[Protocol](_ => (

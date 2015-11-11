@@ -10,7 +10,7 @@ import config.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
 import ecdc.aws.ecs.EcsClient
 import ecdc.aws.s3.S3EncryptedKeyProvider
 import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider }
-import ecdc.git.Git.{Password, User, RepoUri}
+import ecdc.git.Git.{ Password, User, RepoUri }
 import ecdc.git.Git
 import scaldi.Module
 

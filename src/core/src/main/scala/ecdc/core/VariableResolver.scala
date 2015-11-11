@@ -6,7 +6,7 @@ import java.io.File
 import model.Cluster
 import scala.io.Source
 
-object VariableResolver extends Arm {
+object VariableResolver {
 
   case class Variable(name: String, value: String, path: String) {
     override def equals(that: scala.Any): Boolean = {
@@ -33,7 +33,7 @@ object VariableResolver extends Arm {
   private def ls(dir: File): Seq[String] = Option(dir.list()).map(_.toSeq).getOrElse(Seq())
 
   private def toVariable(file: File, path: String): Variable = {
-    val value = using(Source.fromFile(file))(_.getLines.find(_ => true))
+    val value = Source.fromFile(file).getLines.find(_ => true)
     Variable(file.getName, value.getOrElse(""), path)
   }
 }
