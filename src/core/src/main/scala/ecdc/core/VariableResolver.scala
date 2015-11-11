@@ -33,7 +33,7 @@ object VariableResolver {
   private def ls(dir: File): Seq[String] = Option(dir.list()).map(_.toSeq).getOrElse(Seq())
 
   private def toVariable(file: File, path: String): Variable = {
-    val value = Source.fromFile(file).getLines.find(_ => true)
-    Variable(file.getName, value.getOrElse(""), path)
+    val value = Source.fromFile(file).getLines.mkString("\n")
+    Variable(file.getName, value, path)
   }
 }

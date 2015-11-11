@@ -1,9 +1,10 @@
 package config
 
-import com.typesafe.config.{ConfigValue, ConfigFactory}
+import com.typesafe.config.ConfigFactory
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import ecdc.core.TaskDef.{Environment, ContainerDefinition}
-import ecdc.core.{TraitReader, VariableResolver, TaskDef}
+import ecdc.core.TaskDef.{ Environment, ContainerDefinition }
+import ecdc.core.VariableResolver.Variable
+import ecdc.core.{ TraitReader, VariableResolver, TaskDef }
 import ecdc.crypto.{ CmsDecryptor, EncryptionType }
 import java.io.File
 import model.{ Version, Service, Cluster }
@@ -30,7 +31,7 @@ sealed trait Value
 case class PlainValue(content: String) extends Value
 case class EncryptedValue(cipherText: String, encryptionType: EncryptionType) extends Value
 
-case class Variable(name: String, file: File) extends Arm {
+case class Var(name: String, file: File) extends Arm {
 
   val encR = """^ENC\[(.*?),(.*?)\]$""".r
   val value: Value = {
@@ -72,9 +73,6 @@ trait TaskDefinitionResolver {
     taskdefFileName: String = "taskdef.json"): Either[Seq[Error], JsObject]
 
   def resolve(baseDir: File, cluster: Cluster, service: Service, version: Version)(implicit ec: ExecutionContext): Future[TaskDef]
-  // VERSION
-  // CLUSTER
-  // SERVICE as env-vars
 }
 
 object TaskDefinitionResolver {
@@ -85,7 +83,7 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
 
   val logger = LoggerFactory.getLogger(getClass)
 
-  def resolveVariables(baseDir: File, app: String, cluster: Cluster): Set[Variable] = {
+  def resolveVariables(baseDir: File, app: String, cluster: Cluster): Set[Var] = {
     //TODO get hierarchies from config
     val hierarchy = Seq("cluster", s"cluster/${cluster.name}", s"service/$app", s"service/$app/cluster/${cluster.name}")
     hierarchy.map {
@@ -95,7 +93,7 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
         val vars = Option(f.list()).map(_.toSeq).getOrElse(Seq())
         logger.debug(s"Found variables: ${vars.mkString(",")}")
         vars.map(f1 ⇒ toVariable(f, f1))
-    }.foldLeft(Set[Variable]()) {
+    }.foldLeft(Set[Var]()) {
       (acc, el) ⇒
         {
           val filtered = acc.filterNot(v ⇒ el.map(_.name).contains(v.name))
@@ -107,7 +105,7 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
   override def resolve(baseDir: File, app: String, cluster: Cluster, additionalVars: Map[String, String] = Map(),
     taskDefFileName: String = "taskdef.json"): Either[Seq[Error], JsObject] = {
 
-    def template(maybeF: Either[Seq[Error], File], vars: Set[Variable]): Either[Seq[Error], Template] = {
+    def template(maybeF: Either[Seq[Error], File], vars: Set[Var]): Either[Seq[Error], Template] = {
       maybeF.right.flatMap(
         f ⇒ {
           val extractedVars: Set[Either[Seq[Error], (String, String)]] = vars.map(v ⇒ extract(v.value)
@@ -128,7 +126,7 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
       .lastOption
       .toRight(Seq(Error(s"no '$taskDefFileName' in hierarchy found")))
     logger.debug(s"Resolved template: $mayBeF")
-    val resolvedVars: Set[Variable] = resolveVariables(baseDir, app, cluster)
+    val resolvedVars: Set[Var] = resolveVariables(baseDir, app, cluster)
     logger.debug(s"Resolved vars: ${resolvedVars.mkString("\n")}")
     template(mayBeF, resolvedVars).right.flatMap {
       t ⇒
@@ -149,9 +147,9 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
     }
   }
 
-  private def toVariable(dir: File, s: String): Variable = {
+  private def toVariable(dir: File, s: String): Var = {
     val v = new File(dir, s)
-    Variable(v.getName, v)
+    Var(v.getName, v)
   }
 
   override def resolve(
@@ -162,7 +160,10 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
 
     val serviceConf = baseDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
     val serviceTraits = TraitReader.readTraits(serviceConf)
-    val vars = VariableResolver.resolveVariables(baseDir, serviceTraits, cluster) // TODO decrypt value
+    val vars = VariableResolver.resolveVariables(baseDir, serviceTraits, cluster) + // TODO decrypt values
+      Variable("CLUSTER", cluster.name, "automatic") +
+      Variable("SERVICE", service.name, "automatic") +
+      Variable("VERSION", version.value, "automatic")
     val conf = ConfigFactory.parseFile(serviceConf).resolveWith(
       ConfigFactory.parseMap(vars.map(v => (v.name, v.value)).toMap.asJava, "config variables")
     )
