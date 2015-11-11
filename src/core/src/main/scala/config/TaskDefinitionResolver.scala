@@ -170,12 +170,12 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
     val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
       name = service.name,
       image = Image(???, service.name, ???),
-      cpu = ???,
-      memory = ???,
+      cpu = if (conf.hasPath("cpu")) Some(conf.getInt("cpu")) else None,
+      memory = conf.getInt("memory"),
       portMappings = ???,
       essential = true,
-      entryPoint = ???,
-      command = ???,
+      entryPoint = if (conf.hasPath("entryPoint")) conf.getStringList("entryPoint").asScala else Nil,
+      command = if (conf.hasPath("command")) conf.getStringList("entryPoint").asScala else Nil,
       environment = vars.map(v => Environment(v.name, v.value)).toSeq,
       mountPoints = ???
     ))
