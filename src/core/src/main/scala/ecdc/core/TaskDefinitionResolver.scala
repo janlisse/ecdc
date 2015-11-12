@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory
 import ecdc.core.TaskDef.PortMapping.{ Tcp, Protocol }
 import ecdc.core.TaskDef._
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import ecdc.core.VariableResolver.Variable
+import ecdc.core.VariableResolver.{ EncryptedValue, PlainValue, Variable }
 import ecdc.crypto.CmsDecryptor
 import model.{ Version, Service, Cluster }
 import scala.concurrent.{ Future, ExecutionContext }
@@ -19,7 +19,7 @@ trait TaskDefinitionResolver {
     version: Version)(implicit ec: ExecutionContext): Future[TaskDef]
 }
 
-class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
+class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
   override def resolve(
     baseDir: File,
     cluster: Cluster,
@@ -28,12 +28,15 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
 
     val serviceConf = baseDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
     val serviceTraits = TraitReader.readTraits(serviceConf)
-    val vars = VariableResolver.resolveVariables(baseDir, serviceTraits, cluster) + // TODO decrypt values
-      Variable("CLUSTER", cluster.name, "automatic") +
-      Variable("SERVICE", service.name, "automatic") +
-      Variable("VERSION", version.value, "automatic")
+    val vars = (VariableResolver.resolveVariables(baseDir, serviceTraits, cluster) +
+      Variable("CLUSTER", PlainValue(cluster.name), "automatic") +
+      Variable("SERVICE", PlainValue(service.name), "automatic") +
+      Variable("VERSION", PlainValue(version.value), "automatic")).map(v => v.value match {
+        case pv: PlainValue => (v.name, pv.content)
+        case ev: EncryptedValue => (v.name, ev.content)
+      }).toMap
     val conf = ConfigFactory.parseFile(serviceConf).resolveWith(
-      ConfigFactory.parseMap(vars.map(v => (v.name, v.value)).toMap.asJava, "config variables")
+      ConfigFactory.parseMap(vars.asJava, "config variables")
     )
     val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
       name = service.name,
@@ -57,7 +60,7 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
       essential = true,
       entryPoint = conf.getStringSeq("entryPoint"),
       command = conf.getStringSeq("command"),
-      environment = vars.map(v => Environment(v.name, v.value)).toSeq,
+      environment = vars.map(v => Environment(v._1, v._2)).toSeq,
       mountPoints =
         conf.getConfigSeq("mountPoints").map(cfg => {
           MountPoint(

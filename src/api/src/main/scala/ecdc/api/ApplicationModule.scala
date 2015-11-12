@@ -51,7 +51,7 @@ class ApplicationModule extends Module {
     inject[SecretKeyProvider]
   )
 
-  bind[TaskDefinitionResolver] to new FileSystemTaskDefinitionResolver(
+  bind[TaskDefinitionResolver] to new FileSystemTaskDefinitionResolver()(
     inject[CmsDecryptor]
   )
 
