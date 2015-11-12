@@ -2,7 +2,7 @@ package config
 
 import com.typesafe.config.ConfigFactory
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import ecdc.core.TaskDef.{ Environment, ContainerDefinition }
+import ecdc.core.TaskDef.{ PortMapping, MountPoint, Environment, ContainerDefinition }
 import ecdc.core.VariableResolver.Variable
 import ecdc.core.{ TraitReader, VariableResolver, TaskDef }
 import ecdc.crypto.{ CmsDecryptor, EncryptionType }
@@ -17,7 +17,7 @@ import scala.util.{ Success, Failure, Try }
 import scala.collection.JavaConverters._
 import TaskDefinitionResolver._
 
-trait Arm {
+private trait Arm {
   def using[T <: { def close() }, B](resource: T)(block: T ⇒ B): B = {
     try {
       block(resource)
@@ -27,11 +27,11 @@ trait Arm {
   }
 }
 
-sealed trait Value
-case class PlainValue(content: String) extends Value
-case class EncryptedValue(cipherText: String, encryptionType: EncryptionType) extends Value
+private sealed trait Value
+private case class PlainValue(content: String) extends Value
+private case class EncryptedValue(cipherText: String, encryptionType: EncryptionType) extends Value
 
-case class Var(name: String, file: File) extends Arm {
+private case class Var(name: String, file: File) extends Arm {
 
   val encR = """^ENC\[(.*?),(.*?)\]$""".r
   val value: Value = {
@@ -57,7 +57,7 @@ case class Var(name: String, file: File) extends Arm {
       .getOrElse(throw new IllegalArgumentException(s"Unable to unwrap encrypted value: $s"))
 }
 
-case class Template(file: File, context: Map[String, String]) extends Arm {
+private case class Template(file: File, context: Map[String, String]) extends Arm {
   val tmpl = using(Source.fromFile(file))(_.getLines().mkString("\n"))
   def render: String = {
     """\$\{(\w+)\}""".r.replaceAllIn(tmpl, m ⇒ {
@@ -67,7 +67,7 @@ case class Template(file: File, context: Map[String, String]) extends Arm {
   }
 }
 
-trait TaskDefinitionResolver {
+private trait TaskDefinitionResolver {
   def resolve(baseDir: File, app: String, env: Cluster,
     additionalVars: Map[String, String],
     taskdefFileName: String = "taskdef.json"): Either[Seq[Error], JsObject]
@@ -75,11 +75,11 @@ trait TaskDefinitionResolver {
   def resolve(baseDir: File, cluster: Cluster, service: Service, version: Version)(implicit ec: ExecutionContext): Future[TaskDef]
 }
 
-object TaskDefinitionResolver {
+private object TaskDefinitionResolver {
   case class Error(msg: String) extends AnyVal
 }
 
-class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
+private class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
 
   val logger = LoggerFactory.getLogger(getClass)
 
@@ -172,12 +172,43 @@ class FileSystemTaskDefinitionResolver(cmsDecryptor: CmsDecryptor) extends TaskD
       image = Image(???, service.name, ???),
       cpu = if (conf.hasPath("cpu")) Some(conf.getInt("cpu")) else None,
       memory = conf.getInt("memory"),
-      portMappings = ???,
+      portMappings =
+        if (conf.hasPath("portMappings")) {
+          conf.getConfigList("portMappings").asScala.toSeq.map(cfg =>
+            PortMapping(
+              conf.getInt("containerPort"),
+              ???
+            )
+          )
+        } else {
+          Nil
+        },
       essential = true,
-      entryPoint = if (conf.hasPath("entryPoint")) conf.getStringList("entryPoint").asScala else Nil,
-      command = if (conf.hasPath("command")) conf.getStringList("entryPoint").asScala else Nil,
+      entryPoint =
+        if (conf.hasPath("entryPoint")) {
+          conf.getStringList("entryPoint").asScala
+        } else {
+          Nil
+        },
+      command =
+        if (conf.hasPath("command")) {
+          conf.getStringList("command").asScala
+        } else {
+          Nil
+        },
       environment = vars.map(v => Environment(v.name, v.value)).toSeq,
-      mountPoints = ???
+      mountPoints =
+        if (conf.hasPath("mountPoints")) {
+          conf.getConfigList("mountPoints").asScala.toSeq.map(cfg => {
+            MountPoint(
+              cfg.getString("sourceVolume"),
+              cfg.getString("containerPath"),
+              if (cfg.hasPath("readOnly")) cfg.getBoolean("readOnly") else false
+            )
+          })
+        } else {
+          Nil
+        }
     ))
     Future.successful(TaskDef(service.name, containerDefinitions, ???))
   }

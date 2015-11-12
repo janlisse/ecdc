@@ -2,7 +2,7 @@ package ecdc.api
 
 import java.util.Locale
 import com.amazonaws.services.ecs.model.{ Service => _, _ }
-import config.TaskDefinitionResolver
+import ecdc.core.TaskDefinitionResolver
 import ecdc.aws.ecs.EcsClient
 import ecdc.core.TaskDef
 import ecdc.git.Git

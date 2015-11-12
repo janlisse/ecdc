@@ -91,6 +91,11 @@ object TaskDef {
           case Udp => JString("udp")
         }
       ))
+      def fromString(s: String): Option[Protocol] = s match {
+        case "tcp" => Some(Tcp)
+        case "udp" => Some(Udp)
+        case _ => None
+      }
     }
   }
 

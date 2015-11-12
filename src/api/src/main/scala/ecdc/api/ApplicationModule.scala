@@ -6,7 +6,7 @@ import com.amazonaws.services.ecs.AmazonECSAsyncClient
 import com.amazonaws.services.elasticloadbalancing.AmazonElasticLoadBalancingAsyncClient
 import com.amazonaws.services.s3.AmazonS3EncryptionClient
 import com.amazonaws.services.s3.model.{ CryptoConfiguration, KMSEncryptionMaterialsProvider }
-import config.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
+import ecdc.core.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
 import ecdc.aws.ecs.EcsClient
 import ecdc.aws.s3.S3EncryptedKeyProvider
 import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider }
