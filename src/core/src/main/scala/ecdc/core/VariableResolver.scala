@@ -2,7 +2,6 @@ package ecdc.core
 
 import java.io.File
 
-import ecdc.core.TraitReader.ServiceTrait
 import ecdc.crypto.{ CmsDecryptor, EncryptionType }
 import model.Cluster
 

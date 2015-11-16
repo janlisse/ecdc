@@ -10,6 +10,10 @@ import scala.concurrent.Future
 class EcsClient(amazonECSAsyncClient: AmazonECSAsyncClient,
     elbClient: AmazonElasticLoadBalancingAsyncClient) {
 
+  def describeService(describeServiceRequest: DescribeServicesRequest): Future[DescribeServicesResult] = {
+    wrapAsyncMethod(amazonECSAsyncClient.describeServicesAsync, describeServiceRequest)
+  }
+
   def listClusters(): Future[ListClustersResult] = {
     val listClusters = new ListClustersRequest()
     wrapAsyncMethod(amazonECSAsyncClient.listClustersAsync, listClusters)

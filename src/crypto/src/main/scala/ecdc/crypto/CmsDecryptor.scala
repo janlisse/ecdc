@@ -7,7 +7,11 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.util.encoders.Base64
 import scala.collection.JavaConverters._
 
-class CmsDecryptor(keyProvider: SecretKeyProvider) {
+trait TextDecryptor {
+  def decrypt(enc: String): String
+}
+
+class CmsDecryptor(keyProvider: SecretKeyProvider) extends TextDecryptor {
   Security.addProvider(new BouncyCastleProvider())
 
   def decrypt(enc: String): String = {

@@ -1,6 +1,5 @@
 package ecdc.core
 
-import ecdc.core.TraitReader.ServiceTrait
 import ecdc.core.VariableResolver._
 import java.io.File
 import model.Cluster
