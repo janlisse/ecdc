@@ -10,15 +10,26 @@ import scala.collection.JavaConverters._
 
 import com.typesafe.config.{ Config, ConfigFactory }
 
-class ServiceConfig(service: Service, cluster: Cluster, repoDir: File) {
+case class ServiceConfig(taskDefinition: TaskDef, desiredCount: Option[Int], loadBalancer: Option[LoadBalancer])
+case class LoadBalancer(instancePort: Int, loadBalancerPort: Int,
+  protocol: String, instanceProtocol: String, scheme: String, subnets: Seq[String],
+  securityGroups: Seq[String], healthCheck: HealthCheck)
+case class HealthCheck(target: String, healthyThreshold: Int,
+  unhealthyThreshold: Int, interval: Int, timeout: Int)
 
-  val serviceConf = repoDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
+object ServiceConfig {
 
-  def readTaskDefinition(variables: Map[String, String], traits: Seq[ServiceTrait]): TaskDef = {
+  def read(service: Service, cluster: Cluster, repoDir: File,
+    variables: Map[String, String], traits: Seq[ServiceTrait]): ServiceConfig = {
 
-    val baseConfig = ConfigFactory.parseFile(serviceConf)
-    val stackedConf = applyTraits(traits, baseConfig)
-    val conf = stackedConf.resolveWith(ConfigFactory.parseMap(variables.asJava, "config variables"))
+    val conf = resolveConfig(service, cluster, repoDir, variables, traits)
+    val taskDefinition = readTaskDef(conf, service, variables)
+    val desiredCount = conf.getIntOptional("desiredCount")
+    val loadBalancer = readLoadBalancer(conf)
+    ServiceConfig(taskDefinition, desiredCount, loadBalancer)
+  }
+
+  private def readTaskDef(conf: Config, service: Service, variables: Map[String, String]) = {
     val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
       name = service.name,
       image = {
@@ -59,11 +70,18 @@ class ServiceConfig(service: Service, cluster: Cluster, repoDir: File) {
           .map(Host)
       )
     )
-    val desiredCount = conf.getIntOptional("desiredCount")
-    TaskDef(service.name, containerDefinitions, volumes, desiredCount)
+    TaskDef(service.name, containerDefinitions, volumes)
   }
 
-  def applyTraits(traits: Seq[ServiceTrait], baseConfig: Config) = {
+  private def resolveConfig(service: Service, cluster: Cluster, repoDir: File,
+    variables: Map[String, String], traits: Seq[ServiceTrait]): Config = {
+    val serviceConf = repoDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
+    val baseConfig = ConfigFactory.parseFile(serviceConf)
+    val stackedConf = applyTraits(traits, baseConfig, repoDir, cluster)
+    stackedConf.resolveWith(ConfigFactory.parseMap(variables.asJava, "config variables"))
+  }
+
+  def applyTraits(traits: Seq[ServiceTrait], baseConfig: Config, repoDir: File, cluster: Cluster) = {
     traits.foldLeft(baseConfig) {
       case (acc, t) =>
         val path = s"trait/${t.name}/cluster/${cluster.name}/service.conf"
@@ -72,5 +90,28 @@ class ServiceConfig(service: Service, cluster: Cluster, repoDir: File) {
           acc.withFallback(ConfigFactory.parseFile(confFile))
         } else acc
     }
+  }
+
+  private def readLoadBalancer(conf: Config): Option[LoadBalancer] = {
+    conf.getConfigOptional("loadBalancer").map { lb =>
+      val healthCheck = readHealthCheck(lb.getConfig("healthCheck"))
+      val instancePort = lb.getInt("instancePort")
+      val port = lb.getInt("port")
+      val protocol = lb.getStringOptional("protocol").getOrElse("http")
+      val instanceProtocol = lb.getStringOptional("instanceProtocol").getOrElse("http")
+      val scheme = lb.getString("scheme")
+      val subnets = lb.getStringList("subnets").asScala
+      val securityGroups = lb.getStringList("securityGroups").asScala
+      LoadBalancer(instancePort, port, protocol, instanceProtocol, scheme, subnets, securityGroups, healthCheck)
+    }
+  }
+
+  private def readHealthCheck(conf: Config): HealthCheck = {
+    val target = conf.getString("target")
+    val healthyThreshold = conf.getInt("healthyThreshold")
+    val unhealthyThreshold = conf.getInt("unhealthyThreshold")
+    val interval = conf.getInt("interval")
+    val timeout = conf.getInt("timeout")
+    HealthCheck(target, healthyThreshold, unhealthyThreshold, interval, timeout)
   }
 }

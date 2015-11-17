@@ -11,20 +11,18 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 trait TaskDefinitionResolver {
   def resolve(
-    serviceConfig: ServiceConfig,
     baseDir: File,
     cluster: Cluster,
     service: Service,
-    version: Version)(implicit ec: ExecutionContext): Future[TaskDef]
+    version: Version)(implicit ec: ExecutionContext): Future[ServiceConfig]
 }
 
 class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
   override def resolve(
-    serviceConfig: ServiceConfig,
     baseDir: File,
     cluster: Cluster,
     service: Service,
-    version: Version)(implicit ec: ExecutionContext): Future[TaskDef] = {
+    version: Version)(implicit ec: ExecutionContext): Future[ServiceConfig] = {
 
     val traits = TraitReader(service, baseDir).readTraits
     val vars = (VariableResolver.resolveVariables(baseDir, traits, service, cluster) +
@@ -34,6 +32,6 @@ class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) ex
         case pv: PlainValue => (v.name, pv.content)
         case ev: EncryptedValue => (v.name, ev.content)
       }).toMap
-    Future.successful(serviceConfig.readTaskDefinition(vars, traits))
+    Future.successful(ServiceConfig.read(service, cluster, baseDir, vars, traits))
   }
 }

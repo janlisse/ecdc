@@ -27,10 +27,9 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
   def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
     for {
       repoDir <- git.update()
-      serviceConfig = new ServiceConfig(service, cluster, repoDir)
-      taskDef <- configResolver.resolve(serviceConfig, repoDir, cluster, service, version)
+      serviceConfig <- configResolver.resolve(repoDir, cluster, service, version)
     } yield {
-      Ok(taskDef.toJson)
+      Ok(serviceConfig.taskDefinition.toJson)
     }
   }
 
@@ -53,21 +52,21 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     import deployRequest._
     for {
       repoDir <- git.update()
-      serviceConfig = new ServiceConfig(service, cluster, repoDir)
-      taskDef <- configResolver.resolve(serviceConfig, repoDir, cluster, service, version)
-      taskDefResult ← ecsClient.registerTaskDef(taskDef)
+      serviceConfig <- configResolver.resolve(repoDir, cluster, service, version)
+      taskDefResult ← ecsClient.registerTaskDef(serviceConfig.taskDefinition)
       taskDefArn = Arn(taskDefResult.getTaskDefinition.getTaskDefinitionArn)
-      res ← createOrUpdateService(taskDef.desiredCount, taskDefArn, cluster, service, version)
+      res ← createOrUpdateService(serviceConfig, taskDefArn, cluster, service, version)
     } yield Ok(s"$service.\n")
   }
 
-  def createOrUpdateService(desiredCount: Option[Int],
+  def createOrUpdateService(serviceConfig: ServiceConfig,
     taskDefArn: Arn,
     cluster: Cluster,
     service: Service,
     version: Version): Future[Unit] = {
 
     def createOrUpdateInner(dsr: DescribeServiceResult, taskDefArn: Arn): Future[Unit] = {
+      val desiredCount = serviceConfig.desiredCount
       if (dsr.exists) {
         val usr = new UpdateServiceRequest()
           .withCluster(dsr.cluster.name)
