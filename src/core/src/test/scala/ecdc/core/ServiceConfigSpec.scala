@@ -31,4 +31,12 @@ class ServiceConfigSpec extends Spec {
       Environment("MEMORY", "1024"),
       Environment("CLUSTER", "production"))
   }
+
+  it should "tolerate missing service.conf" in {
+    val sc = new ServiceConfig(Service("baz"), Cluster("production"), baseDir)
+    val td = sc.readTaskDefinition(Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Seq(ServiceTrait("webapp")))
+    td.containerDefinitions.head.environment shouldBe Seq(
+      Environment("MEMORY", "1024"),
+      Environment("CLUSTER", "production"))
+  }
 }
