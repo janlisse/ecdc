@@ -4,33 +4,21 @@ import java.io.File
 import ecdc.core.TaskDef.PortMapping.{ Tcp, Protocol }
 import ecdc.core.TaskDef._
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import model.Service
+import model.{ Cluster, Service }
 
 import scala.collection.JavaConverters._
 
 import com.typesafe.config.{ Config, ConfigFactory }
 
-case class ServiceTrait(name: String)
-
-class ServiceConfig(service: Service, repoDir: File) {
+class ServiceConfig(service: Service, cluster: Cluster, repoDir: File) {
 
   val serviceConf = repoDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
-  var extrapolatedConf: Option[Config] = None
 
-  def readDesiredCount: Option[Int] = extrapolatedConf.map(_.getInt("desiredCount"))
+  def readTaskDefinition(variables: Map[String, String], traits: Seq[ServiceTrait]): TaskDef = {
 
-  def readTraits: Seq[ServiceTrait] = ConfigFactory
-    .parseFile(serviceConf)
-    .getStringList("traits")
-    .asScala
-    .map(ServiceTrait)
-
-  def readTaskDefinition(variables: Map[String, String]): TaskDef = {
-
-    val conf = ConfigFactory.parseFile(serviceConf).resolveWith(
-      ConfigFactory.parseMap(variables.asJava, "config variables")
-    )
-    extrapolatedConf = Some(conf)
+    val baseConfig = ConfigFactory.parseFile(serviceConf)
+    val stackedConf = applyTraits(traits, baseConfig)
+    val conf = stackedConf.resolveWith(ConfigFactory.parseMap(variables.asJava, "config variables"))
     val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
       name = service.name,
       image = {
@@ -44,9 +32,9 @@ class ServiceConfig(service: Service, repoDir: File) {
       memory = conf.getInt("memory"),
       portMappings = conf.getConfigSeq("portMappings").map(cfg =>
         PortMapping(
-          conf.getInt("containerPort"),
-          conf.getIntOptional("hostPort"),
-          conf.getOneOf("protocol", "udp", "tcp")
+          cfg.getInt("containerPort"),
+          cfg.getIntOptional("hostPort"),
+          cfg.getOneOf("protocol", "udp", "tcp")
             .flatMap(Protocol.fromString).getOrElse(Tcp)
         )
       ),
@@ -71,6 +59,18 @@ class ServiceConfig(service: Service, repoDir: File) {
           .map(Host)
       )
     )
-    TaskDef(service.name, containerDefinitions, volumes)
+    val desiredCount = conf.getIntOptional("desiredCount")
+    TaskDef(service.name, containerDefinitions, volumes, desiredCount)
+  }
+
+  def applyTraits(traits: Seq[ServiceTrait], baseConfig: Config) = {
+    traits.foldLeft(baseConfig) {
+      case (acc, t) =>
+        val path = s"trait/${t.name}/cluster/${cluster.name}/service.conf"
+        val confFile = new File(repoDir, path)
+        if (confFile.exists()) {
+          acc.withFallback(ConfigFactory.parseFile(confFile))
+        } else acc
+    }
   }
 }

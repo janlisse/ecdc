@@ -8,7 +8,8 @@ import org.json4s.native.Serialization._
 case class TaskDef(
     family: String,
     containerDefinitions: Seq[ContainerDefinition],
-    volumes: Seq[Volume] = Nil) {
+    volumes: Seq[Volume] = Nil,
+    desiredCount: Option[Int] = None) {
   def toJson: String = writePretty(this)(TaskDef.Implicits.formats)
 }
 
@@ -58,13 +59,11 @@ object TaskDef {
   object ContainerDefinition {
     case class Image(respositoryUrl: Option[String] = None, name: String, tag: String)
     object Image {
-      object Formats extends CustomSerializer[Image](_ => (
-        {
-          case JString(s) => Image(None, "", "") // TODO deserialize?
-        },
-        {
-          case Image(url, name, tag) => JString(url.map(_ + "/").getOrElse("") + s"$name:$tag")
-        }
+      object Formats extends CustomSerializer[Image](_ => ({
+        case JString(s) => Image(None, "", "") // TODO deserialize?
+      }, {
+        case Image(url, name, tag) => JString(url.map(_ + "/").getOrElse("") + s"$name:$tag")
+      }
       ))
     }
   }
@@ -81,15 +80,13 @@ object TaskDef {
     }
 
     object Protocol {
-      object Formats extends CustomSerializer[Protocol](_ => (
-        {
-          case JString(s) if s == "tcp" => Tcp
-          case JString(s) if s == "udp" => Udp
-        },
-        {
-          case Tcp => JString("tcp")
-          case Udp => JString("udp")
-        }
+      object Formats extends CustomSerializer[Protocol](_ => ({
+        case JString(s) if s == "tcp" => Tcp
+        case JString(s) if s == "udp" => Udp
+      }, {
+        case Tcp => JString("tcp")
+        case Udp => JString("udp")
+      }
       ))
       def fromString(s: String): Option[Protocol] = s match {
         case "tcp" => Some(Tcp)

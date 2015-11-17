@@ -26,13 +26,14 @@ class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) ex
     service: Service,
     version: Version)(implicit ec: ExecutionContext): Future[TaskDef] = {
 
-    val vars = (VariableResolver.resolveVariables(baseDir, serviceConfig.readTraits, cluster) +
+    val traits = TraitReader(service, baseDir).readTraits
+    val vars = (VariableResolver.resolveVariables(baseDir, traits, service, cluster) +
       Variable("CLUSTER", PlainValue(cluster.name), "automatic") +
       Variable("SERVICE", PlainValue(service.name), "automatic") +
       Variable("VERSION", PlainValue(version.value), "automatic")).map(v => v.value match {
         case pv: PlainValue => (v.name, pv.content)
         case ev: EncryptedValue => (v.name, ev.content)
       }).toMap
-    Future.successful(serviceConfig.readTaskDefinition(vars))
+    Future.successful(serviceConfig.readTaskDefinition(vars, traits))
   }
 }

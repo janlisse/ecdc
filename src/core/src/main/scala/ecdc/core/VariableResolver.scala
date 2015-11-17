@@ -3,7 +3,7 @@ package ecdc.core
 import java.io.File
 
 import ecdc.crypto.{ CmsDecryptor, EncryptionType }
-import model.Cluster
+import model.{ Service, Cluster }
 
 import scala.io.Source
 
@@ -32,13 +32,16 @@ object VariableResolver {
 
   }
 
-  def resolveVariables(baseDir: File, traits: Seq[ServiceTrait], cluster: Cluster): Set[Variable] = {
-    traits.flatMap {
-      t =>
-        val path = s"trait/${t.name}/cluster/${cluster.name}/var"
-        val dir = new File(baseDir, path)
-        ls(dir).map(file => toVariable(new File(dir, file), path))
-    }.toSet
+  def resolveVariables(baseDir: File, traits: Seq[ServiceTrait],
+    service: Service, cluster: Cluster): Set[Variable] = {
+
+    def readFromPath(path: String) = {
+      val dir = new File(baseDir, path)
+      ls(dir).map(file => toVariable(new File(dir, file), path))
+    }
+    val serviceVars = readFromPath(s"service/${service.name}/cluster/${cluster.name}/var")
+    val traitVars = traits.flatMap(t => readFromPath(s"trait/${t.name}/cluster/${cluster.name}/var"))
+    (serviceVars ++ traitVars).toSet
   }
 
   private def ls(dir: File): Seq[String] = Option(dir.list()).map(_.toSeq).getOrElse(Seq())
@@ -61,5 +64,4 @@ object VariableResolver {
     }
     Variable(file.getName, unwrapped, path)
   }
-
 }

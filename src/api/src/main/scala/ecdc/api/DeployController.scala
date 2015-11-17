@@ -27,7 +27,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
   def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
     for {
       repoDir <- git.update()
-      serviceConfig = new ServiceConfig(service, repoDir)
+      serviceConfig = new ServiceConfig(service, cluster, repoDir)
       taskDef <- configResolver.resolve(serviceConfig, repoDir, cluster, service, version)
     } yield {
       Ok(taskDef.toJson)
@@ -53,15 +53,15 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     import deployRequest._
     for {
       repoDir <- git.update()
-      serviceConfig = new ServiceConfig(service, repoDir)
+      serviceConfig = new ServiceConfig(service, cluster, repoDir)
       taskDef <- configResolver.resolve(serviceConfig, repoDir, cluster, service, version)
       taskDefResult ← ecsClient.registerTaskDef(taskDef)
       taskDefArn = Arn(taskDefResult.getTaskDefinition.getTaskDefinitionArn)
-      res ← createOrUpdateService(serviceConfig, taskDefArn, cluster, service, version)
+      res ← createOrUpdateService(taskDef.desiredCount, taskDefArn, cluster, service, version)
     } yield Ok(s"$service.\n")
   }
 
-  def createOrUpdateService(serviceConfig: ServiceConfig,
+  def createOrUpdateService(desiredCount: Option[Int],
     taskDefArn: Arn,
     cluster: Cluster,
     service: Service,
@@ -73,7 +73,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
           .withCluster(dsr.cluster.name)
           .withService(service.name)
           .withTaskDefinition(taskDefArn.value)
-          .withDesiredCount(getDesiredCount(serviceConfig, dsr.desiredCount))
+          .withDesiredCount(getDesiredCount(desiredCount, dsr.desiredCount))
         ecsClient.updateService(usr).map(_ => ()) //TODO figure out how to test if deployment went fine
       } else {
         logger.info("Service doesn't exist yet, create it now.")
@@ -81,14 +81,14 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
           .withCluster(cluster.name)
           .withServiceName(service.name)
           .withTaskDefinition(taskDefArn.value)
-          .withDesiredCount(getDesiredCount(serviceConfig, dsr.desiredCount))
+          .withDesiredCount(getDesiredCount(desiredCount, dsr.desiredCount))
         //.withLoadBalancers() TODO add LB
         //.withRole() TODO add role
         ecsClient.createService(csr).map(_ => ()) //TODO figure out how to test if deployment went fine
       }
     }
 
-    def getDesiredCount(serviceConfig: ServiceConfig, runningCount: Int) = (serviceConfig.readDesiredCount, runningCount) match {
+    def getDesiredCount(desiredCount: Option[Int], runningCount: Int) = (desiredCount, runningCount) match {
       case (Some(desired), runnning) => if (runnning > desired) runnning else desired
       case (None, running) => if (running == 0) 1 else running
     }
