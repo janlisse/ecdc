@@ -1,23 +1,20 @@
 package ecdc.api
 
-import java.util.Locale
 import com.amazonaws.services.ecs.model.{ Service => _, _ }
-import ecdc.core.{ ServiceConfig, TaskDefinitionResolver, TaskDef }
+import ecdc.api.DeployController._
 import ecdc.aws.ecs.EcsClient
+import ecdc.core.{ ServiceConfig, TaskDef, TaskDefinitionResolver }
 import ecdc.git.Git
 import ecdc.git.Git.Timeout
-import model.{ Cluster, Deployment, Service, Version }
+import model.{ Cluster, Service, Version }
 import org.slf4j.LoggerFactory
-import play.api.http.MimeTypes
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.api.libs.json._
 import play.api.mvc._
+
+import scala.collection.JavaConversions._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.implicitConversions
-import scala.util.Try
-import DeployController._
-import scala.collection.JavaConversions._
 
 class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResolver, git: Git) extends Controller {
 
@@ -28,28 +25,12 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     for {
       repoDir <- git.update()
       serviceConfig <- configResolver.resolve(repoDir, cluster, service, version)
-    } yield {
-      Ok(serviceConfig.taskDefinition.toJson)
-    }
-  }
-
-  def jsonOrForm[T](implicit jr: Reads[T], fr: FormReads[T]): BodyParser[Option[T]] = parse.using {
-    request ⇒
-      request.contentType.map(_.toLowerCase(Locale.ENGLISH)) match {
-        case Some(MimeTypes.JSON) ⇒ BodyParsers.parse.json
-          .map(jr.reads)
-          .map(_.asOpt)
-        case _ ⇒
-          logger.debug("No Content-Type found. Using form parser.")
-          BodyParsers.parse.tolerantFormUrlEncoded.map(fr.reads)
-      }
+    } yield Ok(serviceConfig.taskDefinition.toJson)
   }
 
   def deployLatestService(c: Cluster, a: Service) = deployService(c, a, Version.latest)
 
-  def deployService(c: Cluster, s: Service, v: Version) = Action.async(jsonOrForm[Int]) { req ⇒
-    val deployRequest = Deployment(c, s, v, req.body)
-    import deployRequest._
+  def deployService(cluster: Cluster, service: Service, version: Version) = Action.async { req ⇒
     for {
       repoDir <- git.update()
       serviceConfig <- configResolver.resolve(repoDir, cluster, service, version)
@@ -81,9 +62,11 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
           .withServiceName(service.name)
           .withTaskDefinition(taskDefArn.value)
           .withDesiredCount(getDesiredCount(desiredCount, dsr.desiredCount))
-        //.withLoadBalancers() TODO add LB
+
+        val withLb = serviceConfig.loadBalancer.fold(csr)(lb => csr.withLoadBalancers(lb))
+
         //.withRole() TODO add role
-        ecsClient.createService(csr).map(_ => ()) //TODO figure out how to test if deployment went fine
+        ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine
       }
     }
 
@@ -111,6 +94,8 @@ object DeployController {
 
   def describeServiceRequest(service: Service, cluster: Cluster) =
     new DescribeServicesRequest().withCluster(cluster.name).withServices(service.name)
+
+  implicit def loadBalancerToAwsLb(lb: ecdc.core.LoadBalancer): LoadBalancer = ??? //TODO implement
 
   implicit def tupleToUpdateRequest(t: (RegisterTaskDefinitionResult, Cluster, Service, Int)): UpdateServiceRequest =
     new UpdateServiceRequest()
@@ -175,19 +160,5 @@ object DeployController {
         ).orNull)
         .withName(vol.name)
     ))
-  }
-
-  implicit val desiredCountJsonReads: Reads[Int] = (__ \ 'desiredCount).read[Int]
-
-  implicit val desiredCountFormReads: FormReads[Int] = new FormReads[Int] {
-    override def reads(form: Map[String, Seq[String]]): Option[Int] = form.get("desiredCount")
-      .flatMap(_.headOption)
-      .flatMap(s ⇒ Try {
-        s.toInt
-      }.toOption)
-  }
-
-  trait FormReads[T] {
-    def reads(form: Map[String, Seq[String]]): Option[T]
   }
 }

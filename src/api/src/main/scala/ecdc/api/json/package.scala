@@ -1,7 +1,6 @@
 package ecdc.api
 
-import model.{ Cluster, Deployment, Service, Version }
-import play.api.libs.functional.syntax._
+import model.{ Cluster, Service, Version }
 import play.api.libs.json._
 
 package object json {
@@ -35,20 +34,6 @@ package object json {
   implicit val versionWrites: Writes[Version] = new Writes[Version] {
     override def writes(o: Version): JsValue = new JsString(o.value)
   }
-
-  implicit val deploymentReads: Reads[Deployment] = (
-    (__ \ 'cluster).read[Cluster] and
-    (__ \ 'service).read[Service] and
-    (__ \ 'version).read[Version] and
-    (__ \ 'desiredCount).readNullable[Int]
-  )(Deployment.apply _)
-
-  implicit val deploymentWrites: Writes[Deployment] = (
-    (__ \ 'cluster).write[Cluster] and
-    (__ \ 'service).write[Service] and
-    (__ \ 'version).write[Version] and
-    (__ \ 'desiredCount).writeNullable[Int]
-  )(unlift(Deployment.unapply))
 
   private def read[T](js: JsValue)(f: PartialFunction[JsValue, T]): JsResult[T] =
     if (f isDefinedAt js) JsSuccess(f(js))
