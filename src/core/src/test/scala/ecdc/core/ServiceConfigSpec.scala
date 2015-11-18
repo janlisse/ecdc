@@ -51,6 +51,7 @@ class ServiceConfigSpec extends Spec {
       protocol = "http",
       instanceProtocol = "http",
       scheme = "internal",
+      serviceRole = "ecsService",
       subnets = Seq("subnet-fc0bed99", "subnet-46898a32", "subnet-7aab883c"),
       securityGroups = Seq("sg-2938234c"),
       healthCheck = HealthCheck(

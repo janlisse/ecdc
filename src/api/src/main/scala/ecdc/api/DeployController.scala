@@ -1,9 +1,11 @@
 package ecdc.api
 
 import com.amazonaws.services.ecs.model.{ Service => _, _ }
+import com.amazonaws.services.elasticloadbalancing.model.{ HealthCheck => AwsHealthCheck }
+import com.amazonaws.services.elasticloadbalancing.model.{ ConfigureHealthCheckRequest, Listener, CreateLoadBalancerRequest }
 import ecdc.api.DeployController._
 import ecdc.aws.ecs.EcsClient
-import ecdc.core.{ ServiceConfig, TaskDef, TaskDefinitionResolver }
+import ecdc.core.{ HealthCheck, ServiceConfig, TaskDef, TaskDefinitionResolver }
 import ecdc.git.Git
 import ecdc.git.Git.Timeout
 import model.{ Cluster, Service, Version }
@@ -49,29 +51,80 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
     def createOrUpdateInner(dsr: DescribeServiceResult, taskDefArn: Arn): Future[Unit] = {
       val desiredCount = serviceConfig.desiredCount
       if (dsr.exists) {
-        val usr = new UpdateServiceRequest()
-          .withCluster(dsr.cluster.name)
-          .withService(service.name)
-          .withTaskDefinition(taskDefArn.value)
-          .withDesiredCount(getDesiredCount(desiredCount, dsr.desiredCount))
-        ecsClient.updateService(usr).map(_ => ()) //TODO figure out how to test if deployment went fine
+        updateService(service, cluster, desiredCount, dsr.desiredCount)
       } else {
         logger.info("Service doesn't exist yet, create it now.")
-        val csr = new CreateServiceRequest()
-          .withCluster(cluster.name)
-          .withServiceName(service.name)
-          .withTaskDefinition(taskDefArn.value)
-          .withDesiredCount(getDesiredCount(desiredCount, dsr.desiredCount))
-
-        val withLb = serviceConfig.loadBalancer.fold(csr)(lb => csr.withLoadBalancers(lb))
-
-        //.withRole() TODO add role
-        ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine
+        createServiceStack(service, cluster, serviceConfig, desiredCount, dsr.desiredCount)
       }
     }
 
+    def updateService(service: Service, cluster: Cluster, desiredCount: Option[Int], lastDesiredCount: Int): Future[Unit] = {
+      val usr = new UpdateServiceRequest()
+        .withCluster(cluster.name)
+        .withService(service.name)
+        .withTaskDefinition(taskDefArn.value)
+        .withDesiredCount(getDesiredCount(desiredCount, lastDesiredCount))
+      ecsClient.updateService(usr).map(_ => ()) //TODO figure out how to test if deployment went fine
+    }
+
+    def createServiceStack(service: Service, cluster: Cluster, serviceConfig: ServiceConfig,
+      desiredCount: Option[Int], lastDesiredCount: Int): Future[Unit] = {
+      for {
+        lbResult <- createLoadBalancer(service, serviceConfig.loadBalancer)
+        lbHealthCheckResult <- configureLbHealthCheck(service, serviceConfig.loadBalancer.map(_.healthCheck))
+        serviceResult <- createService(serviceConfig, service, cluster, desiredCount, lastDesiredCount)
+      } yield ()
+    }
+
+    def configureLbHealthCheck(service: Service, hcOpt: Option[HealthCheck]): Future[Unit] =
+      hcOpt.map { hc =>
+        val healthCheck = new AwsHealthCheck()
+          .withTarget(hc.target)
+          .withHealthyThreshold(hc.healthyThreshold)
+          .withUnhealthyThreshold(hc.unhealthyThreshold)
+          .withInterval(hc.interval)
+          .withTimeout(hc.timeout)
+        val hcr = new ConfigureHealthCheckRequest()
+          .withLoadBalancerName(service.name)
+          .withHealthCheck(healthCheck)
+        ecsClient.configureLbHealthCheck(hcr).map(_ => ())
+      }.getOrElse(Future.successful(()))
+
+    def createLoadBalancer(service: Service, lbOpt: Option[ecdc.core.LoadBalancer]): Future[Unit] = {
+      lbOpt.map { lb =>
+        val clbr = new CreateLoadBalancerRequest()
+          .withListeners(Seq(new Listener()
+            .withInstancePort(lb.instancePort)
+            .withLoadBalancerPort(lb.loadBalancerPort)
+            .withInstanceProtocol(lb.protocol)
+          //.withSSLCertificateId() TODO add SSL support
+          ))
+          .withLoadBalancerName(service.name)
+          .withScheme(lb.scheme)
+          .withSecurityGroups(lb.securityGroups)
+          .withSubnets(lb.subnets)
+        ecsClient.createElb(clbr).map(_ => ())
+      }.getOrElse(Future.successful(()))
+    }
+
+    def createService(serviceConfig: ServiceConfig, service: Service, cluster: Cluster, desiredCount: Option[Int], lastDesiredCount: Int) = {
+      val csr = new CreateServiceRequest()
+        .withCluster(cluster.name)
+        .withServiceName(service.name)
+        .withTaskDefinition(taskDefArn.value)
+        .withDesiredCount(getDesiredCount(desiredCount, lastDesiredCount))
+      val withLb = serviceConfig.loadBalancer.fold(csr)(lb =>
+        csr.withLoadBalancers(
+          new LoadBalancer()
+            .withLoadBalancerName(service.name)
+            .withContainerName(service.name)
+            .withContainerPort(serviceConfig.taskDefinition.containerDefinitions.head.portMappings.head.containerPort)
+        ).withRole(lb.serviceRole))
+      ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine
+    }
+
     def getDesiredCount(desiredCount: Option[Int], runningCount: Int) = (desiredCount, runningCount) match {
-      case (Some(desired), runnning) => if (runnning > desired) runnning else desired
+      case (Some(desired), runnning) => desired
       case (None, running) => if (running == 0) 1 else running
     }
 
@@ -94,8 +147,6 @@ object DeployController {
 
   def describeServiceRequest(service: Service, cluster: Cluster) =
     new DescribeServicesRequest().withCluster(cluster.name).withServices(service.name)
-
-  implicit def loadBalancerToAwsLb(lb: ecdc.core.LoadBalancer): LoadBalancer = ??? //TODO implement
 
   implicit def tupleToUpdateRequest(t: (RegisterTaskDefinitionResult, Cluster, Service, Int)): UpdateServiceRequest =
     new UpdateServiceRequest()
