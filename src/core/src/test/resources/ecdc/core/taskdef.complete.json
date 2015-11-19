@@ -3,7 +3,7 @@
   "containerDefinitions":[
     {
       "name":"abcName",
-      "image":"quay.io/imageName:latest",
+      "image":"quay.io/imageName",
       "cpu":5,
       "memory":1024,
       "links":[

@@ -61,7 +61,7 @@ object TaskDef {
       object Formats extends CustomSerializer[Image](_ => ({
         case JString(s) => Image(None, "", "") // TODO deserialize?
       }, {
-        case Image(url, name, tag) => JString(url.map(_ + "/").getOrElse("") + s"$name:$tag")
+        case Image(url, name, tag) => JString(url.map(_ + "/").getOrElse("") + name)
       }
       ))
     }
