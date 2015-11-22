@@ -56,12 +56,15 @@ object TaskDef {
     volumesFrom: Seq[VolumeFrom] = Nil)
 
   object ContainerDefinition {
-    case class Image(respositoryUrl: Option[String] = None, name: String, tag: String)
+    case class Image(respositoryUrl: Option[String] = None, name: String, tag: String) {
+      override def toString = respositoryUrl.map(_ + "/").getOrElse("") + s"$name:$tag"
+    }
+
     object Image {
       object Formats extends CustomSerializer[Image](_ => ({
         case JString(s) => Image(None, "", "") // TODO deserialize?
       }, {
-        case Image(url, name, tag) => JString(url.map(_ + "/").getOrElse("") + name)
+        case i: Image => JString(i.toString)
       }
       ))
     }

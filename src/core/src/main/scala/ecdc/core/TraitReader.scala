@@ -14,7 +14,6 @@ case class ServiceTrait(name: String)
 
 case class TraitReader(service: Service, repoDir: File) {
 
-
   val traitConf = repoDir.toPath.resolve(s"service/${service.name}/trait.conf").toFile
 
   def readTraits: Seq[ServiceTrait] = {
