@@ -21,7 +21,7 @@ import scala.language.implicitConversions
 class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResolver, git: Git) extends Controller {
 
   val logger = LoggerFactory.getLogger(getClass)
-  implicit val timeout = Timeout(5.seconds)
+  implicit val timeout = Timeout(30.seconds)
 
   def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
     for {
