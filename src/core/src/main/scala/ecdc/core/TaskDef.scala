@@ -57,7 +57,7 @@ object TaskDef {
 
   object ContainerDefinition {
     case class Image(respositoryUrl: Option[String] = None, name: String, tag: String) {
-      override def toString = respositoryUrl.map(_ + "/").getOrElse("") + s"$name:$tag"
+      override def toString = respositoryUrl.map(_ + "/").getOrElse("") + name
     }
 
     object Image {
