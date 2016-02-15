@@ -95,8 +95,9 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
         val clbr = new CreateLoadBalancerRequest()
           .withListeners(Seq(new Listener()
             .withInstancePort(lb.instancePort)
+            .withInstanceProtocol(lb.instanceProtocol)
             .withLoadBalancerPort(lb.loadBalancerPort)
-            .withInstanceProtocol(lb.protocol)
+            .withProtocol(lb.protocol)
           //.withSSLCertificateId() TODO add SSL support
           ))
           .withLoadBalancerName(service.name)
