@@ -4,7 +4,7 @@ import java.io.File
 import ecdc.core.TaskDef.PortMapping.{ Tcp, Protocol }
 import ecdc.core.TaskDef._
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import model.{ Cluster, Service }
+import model.{ Cluster, Service, Version }
 
 import scala.collection.JavaConverters._
 
@@ -19,17 +19,18 @@ case class HealthCheck(target: String, healthyThreshold: Int,
 
 object ServiceConfig {
 
-  def read(service: Service, cluster: Cluster, repoDir: File,
+  def read(service: Service, cluster: Cluster, version: Version, repoDir: File,
     variables: Map[String, String], traits: Seq[ServiceTrait]): ServiceConfig = {
 
     val conf = resolveConfig(service, cluster, repoDir, variables, traits)
-    val taskDefinition = readTaskDef(conf, service, variables)
+    val taskDefinition = readTaskDef(conf, service, version, variables)
     val desiredCount = conf.getIntOptional("desiredCount")
     val loadBalancer = readLoadBalancer(conf)
+
     ServiceConfig(taskDefinition, desiredCount, loadBalancer)
   }
 
-  private def readTaskDef(conf: Config, service: Service, variables: Map[String, String]) = {
+  private def readTaskDef(conf: Config, service: Service, version: Version, variables: Map[String, String]) = {
     val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
       name = service.name,
       image = {
@@ -37,7 +38,8 @@ object ServiceConfig {
         Image(
           imgConf.getStringOptional("repositoryUrl"),
           imgConf.getStringOptional("name").getOrElse(service.name),
-          imgConf.getStringOptional("tag").getOrElse("latest"))
+          version.value
+        )
       },
       cpu = conf.getIntOptional("cpu"),
       memory = conf.getInt("memory"),
@@ -75,9 +77,11 @@ object ServiceConfig {
 
   private def resolveConfig(service: Service, cluster: Cluster, repoDir: File,
     variables: Map[String, String], traits: Seq[ServiceTrait]): Config = {
+
     val serviceConf = repoDir.toPath.resolve(s"service/${service.name}/service.conf").toFile
     val baseConfig = ConfigFactory.parseFile(serviceConf)
     val stackedConf = applyTraits(traits, baseConfig, repoDir, cluster)
+
     stackedConf.resolveWith(ConfigFactory.parseMap(variables.asJava, "config variables"))
   }
 

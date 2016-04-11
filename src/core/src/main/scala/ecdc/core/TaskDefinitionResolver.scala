@@ -32,6 +32,7 @@ class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) ex
         case pv: PlainValue => (v.name, pv.content)
         case ev: EncryptedValue => (v.name, ev.content)
       }).toMap
-    Future.successful(ServiceConfig.read(service, cluster, baseDir, vars, traits))
+
+    Future.successful(ServiceConfig.read(service, cluster, version, baseDir, vars, traits))
   }
 }
