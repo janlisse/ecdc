@@ -69,14 +69,15 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
 
     def createServiceStack(service: Service, cluster: Cluster, serviceConfig: ServiceConfig,
       desiredCount: Option[Int], lastDesiredCount: Int): Future[Unit] = {
+      val loadBalancerName = s"${service.name}-${cluster.name}"
       for {
-        lbResult <- createLoadBalancer(service, serviceConfig.loadBalancer)
-        lbHealthCheckResult <- configureLbHealthCheck(service, serviceConfig.loadBalancer.map(_.healthCheck))
-        serviceResult <- createService(serviceConfig, service, cluster, desiredCount, lastDesiredCount)
+        lbResult <- createLoadBalancer(loadBalancerName, service, serviceConfig.loadBalancer)
+        lbHealthCheckResult <- configureLbHealthCheck(loadBalancerName, service, serviceConfig.loadBalancer.map(_.healthCheck))
+        serviceResult <- createService(loadBalancerName, serviceConfig, service, cluster, desiredCount, lastDesiredCount)
       } yield ()
     }
 
-    def configureLbHealthCheck(service: Service, hcOpt: Option[HealthCheck]): Future[Unit] =
+    def configureLbHealthCheck(loadBalancerName: String, service: Service, hcOpt: Option[HealthCheck]): Future[Unit] =
       hcOpt.map { hc =>
         val healthCheck = new AwsHealthCheck()
           .withTarget(hc.target)
@@ -85,12 +86,12 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
           .withInterval(hc.interval)
           .withTimeout(hc.timeout)
         val hcr = new ConfigureHealthCheckRequest()
-          .withLoadBalancerName(service.name)
+          .withLoadBalancerName(loadBalancerName)
           .withHealthCheck(healthCheck)
         ecsClient.configureLbHealthCheck(hcr).map(_ => ())
       }.getOrElse(Future.successful(()))
 
-    def createLoadBalancer(service: Service, lbOpt: Option[ecdc.core.LoadBalancer]): Future[Unit] = {
+    def createLoadBalancer(loadBalancerName: String, service: Service, lbOpt: Option[ecdc.core.LoadBalancer]): Future[Unit] = {
       lbOpt.map { lb =>
         val clbr = new CreateLoadBalancerRequest()
           .withListeners(Seq(new Listener()
@@ -100,7 +101,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
             .withProtocol(lb.protocol)
           //.withSSLCertificateId() TODO add SSL support
           ))
-          .withLoadBalancerName(service.name)
+          .withLoadBalancerName(loadBalancerName)
           .withScheme(lb.scheme)
           .withSecurityGroups(lb.securityGroups)
           .withSubnets(lb.subnets)
@@ -108,7 +109,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
       }.getOrElse(Future.successful(()))
     }
 
-    def createService(serviceConfig: ServiceConfig, service: Service, cluster: Cluster, desiredCount: Option[Int], lastDesiredCount: Int) = {
+    def createService(loadBalancerName: String, serviceConfig: ServiceConfig, service: Service, cluster: Cluster, desiredCount: Option[Int], lastDesiredCount: Int) = {
       val csr = new CreateServiceRequest()
         .withCluster(cluster.name)
         .withServiceName(service.name)
@@ -117,7 +118,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
       val withLb = serviceConfig.loadBalancer.fold(csr)(lb =>
         csr.withLoadBalancers(
           new LoadBalancer()
-            .withLoadBalancerName(service.name)
+            .withLoadBalancerName(loadBalancerName)
             .withContainerName(service.name)
             .withContainerPort(serviceConfig.taskDefinition.containerDefinitions.head.portMappings.head.containerPort)
         ).withRole(lb.serviceRole))
@@ -140,6 +141,7 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
 object DeployController {
 
   case class Arn(value: String) extends AnyVal
+
   case class DescribeServiceResult(service: Service, cluster: Cluster, exists: Boolean, desiredCount: Int)
 
   def describeServiceResult(service: Service, cluster: Cluster, dsr: DescribeServicesResult): DescribeServiceResult =
