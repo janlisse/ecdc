@@ -62,6 +62,14 @@ object ServiceConfig {
             cfg.getString("containerPath"),
             cfg.getBooleanOptional("readOnly").getOrElse(false)
           )
+        }),
+      ulimits =
+        conf.getConfigSeq("ulimits").map(cfg => {
+          Ulimit(
+            cfg.getString("name"),
+            cfg.getInt("softLimit"),
+            cfg.getInt("hardLimit")
+          )
         })
     ))
     val volumes = conf.getConfigSeq("volumes").map(

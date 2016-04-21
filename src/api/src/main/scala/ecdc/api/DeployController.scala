@@ -190,6 +190,11 @@ object DeployController {
           new MountPoint().withContainerPath(mp.containerPath)
             .withSourceVolume(mp.sourceVolume)
             .withReadOnly(mp.readOnly)))
+        .withUlimits(cd.ulimits.map(ul =>
+          new Ulimit().withName(ul.name)
+            .withSoftLimit(ul.softLimit)
+            .withHardLimit(ul.hardLimit))
+        )
         .withName(cd.name)
         .withPortMappings(cd.portMappings.map(p =>
           new PortMapping()
