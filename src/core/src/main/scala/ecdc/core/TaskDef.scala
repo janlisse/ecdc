@@ -53,6 +53,7 @@ object TaskDef {
     command: Seq[String] = Nil,
     environment: Seq[Environment] = Nil,
     mountPoints: Seq[MountPoint] = Nil,
+    ulimits: Seq[Ulimit] = Nil,
     volumesFrom: Seq[VolumeFrom] = Nil)
 
   object ContainerDefinition {
@@ -101,6 +102,8 @@ object TaskDef {
   case class Environment(name: String, value: String)
 
   case class MountPoint(sourceVolume: String, containerPath: String, readOnly: Boolean = false)
+
+  case class Ulimit(name: String, softLimit: Int, hardLimit: Int)
 
   case class VolumeFrom(sourceContainer: String, readOnly: Boolean = false)
 

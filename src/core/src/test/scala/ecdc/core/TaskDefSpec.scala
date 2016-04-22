@@ -24,6 +24,7 @@ class TaskDefSpec extends Spec {
         command = Seq("cmd"),
         environment = Seq(Environment(name = "PATH", value = "/bin")),
         mountPoints = Seq(MountPoint(sourceVolume = "/source", containerPath = "/container", readOnly = true)),
+        ulimits = Seq(Ulimit(softLimit = 4096, hardLimit = 8192, name = "nofile")),
         volumesFrom = Seq(VolumeFrom(sourceContainer = "container", readOnly = true))
       )),
       volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath")))))

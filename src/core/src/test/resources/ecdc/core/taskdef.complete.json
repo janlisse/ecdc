@@ -36,6 +36,13 @@
           "readOnly":true
         }
       ],
+      "ulimits":[
+        {
+          "name":"nofile",
+          "softLimit":4096,
+          "hardLimit":8192
+        }
+      ],
       "volumesFrom":[
         {
           "sourceContainer":"container",
