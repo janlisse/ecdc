@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory
 import scala.collection.JavaConverters._
 import scala.util.Try
 import TraitReader._
+import ecdc.core.VariableResolver.Helper.traitDirExists
 
 trait ServiceTrait {
   def name: String
@@ -34,29 +35,13 @@ case class TraitReader(service: Service, repoDir: File) {
 object TraitReader {
 
   val logger = LoggerFactory.getLogger(getClass)
-
   def getServiceTrait(t: String, repoDir: File): Option[ServiceTrait] = {
-    val serviceTrait = t.split("->", 2).toList match {
-      case n :: Nil =>
-        VariableResolver.Helper.traitDirExists(repoDir, n) match {
-          case true => Some(DefaultServiceTrait(n))
-          case false => None
-        }
-      case n :: c :: Nil =>
-        val cluster = Cluster(c)
-        VariableResolver.Helper.traitDirExists(repoDir, n, cluster) match {
-          case true => Some(ServiceTraitWithFixedCluster(n, cluster))
-          case false => None
-        }
-      case default => None
-    }
-
-    serviceTrait match {
-      case None =>
-        logger.warn(s"Unable to read trait directory: $t")
+    t.split("->", 2).toList match {
+      case n :: Nil if traitDirExists(repoDir, n) => Some(DefaultServiceTrait(n))
+      case n :: c :: Nil if traitDirExists(repoDir, n, Cluster(c)) => Some(ServiceTraitWithFixedCluster(n, Cluster(c)))
       case _ =>
+        logger.warn(s"Unable to read trait directory: $t")
+        None
     }
-
-    serviceTrait
   }
 }
