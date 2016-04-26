@@ -9,6 +9,15 @@ import scala.io.Source
 
 object VariableResolver {
 
+  object Helper {
+    def traitDirExists(baseDir: File, path: String): Boolean = {
+      new File(baseDir, s"trait/$path").exists()
+    }
+    def traitDirExists(baseDir: File, path: String, cluster: Cluster): Boolean = {
+      new File(baseDir, s"trait/$path/cluster/${cluster.name}").exists()
+    }
+  }
+
   case class Error(msg: String) extends AnyVal
   sealed trait Value
   case class PlainValue(content: String) extends Value
@@ -32,15 +41,25 @@ object VariableResolver {
 
   }
 
+  def readFromPath(base: File, path: String): Set[Variable] = {
+    val dir = new File(base, path)
+    ls(dir).map(file => toVariable(new File(dir, file), path)).toSet
+  }
+
+  def resolveTraitVariables(baseDir: File, t: ServiceTrait, cluster: Cluster): Set[Variable] = {
+    t match {
+      case DefaultServiceTrait(n) => readFromPath(baseDir, s"trait/$n/cluster/${cluster.name}/var")
+      case ServiceTraitWithFixedCluster(n, c) => readFromPath(baseDir, s"trait/$n/cluster/${c.name}/var")
+    }
+  }
+  def resolveServiceVariables(baseDir: File, service: Service, cluster: Cluster): Set[Variable] = {
+    readFromPath(baseDir, s"service/${service.name}/cluster/${cluster.name}/var")
+  }
   def resolveVariables(baseDir: File, traits: Seq[ServiceTrait],
     service: Service, cluster: Cluster): Set[Variable] = {
 
-    def readFromPath(path: String) = {
-      val dir = new File(baseDir, path)
-      ls(dir).map(file => toVariable(new File(dir, file), path))
-    }
-    val serviceVars = readFromPath(s"service/${service.name}/cluster/${cluster.name}/var")
-    val traitVars = traits.flatMap(t => readFromPath(s"trait/${t.name}/cluster/${cluster.name}/var"))
+    val serviceVars = resolveServiceVariables(baseDir, service, cluster)
+    val traitVars = traits.flatMap(t => resolveTraitVariables(baseDir, t, cluster))
     (serviceVars ++ traitVars).toSet
   }
 

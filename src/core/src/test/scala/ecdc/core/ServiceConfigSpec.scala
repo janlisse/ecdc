@@ -16,7 +16,7 @@ class ServiceConfigSpec extends Spec {
 
   it should "apply traits to service.conf" in {
     val baseConf = ConfigFactory.parseFile(baseDir.toPath.resolve(s"service/${service.name}/service.conf").toFile)
-    val config = ServiceConfig.applyTraits(Seq(ServiceTrait("loadbalancer")), baseConf, baseDir, cluster)
+    val config = ServiceConfig.applyTraits(Seq(DefaultServiceTrait("loadbalancer")), baseConf, baseDir, cluster)
     config.hasPath("loadbalancer") shouldBe true
   }
 
@@ -36,7 +36,7 @@ class ServiceConfigSpec extends Spec {
   }
 
   it should "tolerate missing service.conf" in {
-    val sc = ServiceConfig.read(Service("baz"), cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Seq(ServiceTrait("webapp")))
+    val sc = ServiceConfig.read(Service("baz"), cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Seq(DefaultServiceTrait("webapp")))
     val td = sc.taskDefinition
     td.containerDefinitions.head.environment shouldBe Seq(
       Environment("MEMORY", "1024"),
