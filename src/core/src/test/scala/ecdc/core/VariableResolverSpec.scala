@@ -11,7 +11,7 @@ class VariableResolverSpec extends Spec {
 
   it should "resolve variables for traits" in {
     val vars = resolveVariables(testRepo,
-      Seq(ServiceTrait("logging"), ServiceTrait("syslog")), Service("foo"), Cluster("production"))
+      Seq(DefaultServiceTrait("logging"), DefaultServiceTrait("syslog")), Service("foo"), Cluster("production"))
     vars should have size 2
     vars should contain(Variable("LOGGING_SERVICE_KEY",
       PlainValue("logging_service_key_foo"), "trait/logging/cluster/production/var"))
@@ -19,7 +19,7 @@ class VariableResolverSpec extends Spec {
 
   it should "pick service vars in favour of trait vars" in {
     val vars = resolveVariables(testRepo,
-      Seq(ServiceTrait("syslog")), Service("foo"), Cluster("production"))
+      Seq(DefaultServiceTrait("syslog")), Service("foo"), Cluster("production"))
     vars.head shouldBe Variable("SYSLOG_URL",
       PlainValue("syslog_url_foo"), "service/foo/cluster/production/var")
   }
