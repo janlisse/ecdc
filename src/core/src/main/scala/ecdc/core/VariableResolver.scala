@@ -46,12 +46,6 @@ object VariableResolver {
     ls(dir).map(file => toVariable(new File(dir, file), path)).toSet
   }
 
-  def resolveTraitVariables(baseDir: File, t: ServiceTrait, cluster: Cluster): Set[Variable] = {
-    t match {
-      case DefaultServiceTrait(n) => readFromPath(baseDir, s"trait/$n/cluster/${cluster.name}/var")
-      case ServiceTraitWithFixedCluster(n, c) => readFromPath(baseDir, s"trait/$n/cluster/${c.name}/var")
-    }
-  }
   def resolveServiceVariables(baseDir: File, service: Service, cluster: Cluster): Set[Variable] = {
     readFromPath(baseDir, s"service/${service.name}/cluster/${cluster.name}/var")
   }
@@ -59,7 +53,9 @@ object VariableResolver {
     service: Service, cluster: Cluster): Set[Variable] = {
 
     val serviceVars = resolveServiceVariables(baseDir, service, cluster)
-    val traitVars = traits.flatMap(t => resolveTraitVariables(baseDir, t, cluster))
+    val traitVars = traits.flatMap(t => {
+      readFromPath(baseDir, PathResolver.variableFolder(t, cluster))
+    })
     (serviceVars ++ traitVars).toSet
   }
 
