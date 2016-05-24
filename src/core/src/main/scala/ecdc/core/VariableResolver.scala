@@ -2,8 +2,8 @@ package ecdc.core
 
 import java.io.File
 
-import ecdc.crypto.{ CmsDecryptor, EncryptionType }
-import model.{ Service, Cluster }
+import ecdc.crypto.{ EncryptionType, TextDecryptor }
+import model.{ Cluster, Service }
 
 import scala.io.Source
 
@@ -22,8 +22,8 @@ object VariableResolver {
   sealed trait Value
   case class PlainValue(content: String) extends Value
   case class EncryptedValue(cipherText: String, encryptionType: EncryptionType) extends Value {
-    def content(implicit cmsDecryptor: CmsDecryptor): String = {
-      cmsDecryptor.decrypt(cipherText)
+    def content(implicit decryptor: TextDecryptor): String = {
+      decryptor.decrypt(cipherText)
     }
   }
 

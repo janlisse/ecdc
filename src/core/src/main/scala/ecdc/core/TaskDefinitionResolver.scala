@@ -4,7 +4,7 @@ package core
 import java.io.File
 
 import ecdc.core.VariableResolver.{ EncryptedValue, PlainValue, Variable }
-import ecdc.crypto.CmsDecryptor
+import ecdc.crypto.{ TextDecryptor }
 import model.{ Cluster, Service, Version }
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -17,7 +17,7 @@ trait TaskDefinitionResolver {
     version: Version)(implicit ec: ExecutionContext): Future[ServiceConfig]
 }
 
-class FileSystemTaskDefinitionResolver()(implicit cmsDecryptor: CmsDecryptor) extends TaskDefinitionResolver {
+class FileSystemTaskDefinitionResolver()(implicit decryptor: TextDecryptor) extends TaskDefinitionResolver {
   override def resolve(
     baseDir: File,
     cluster: Cluster,
