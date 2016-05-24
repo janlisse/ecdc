@@ -9,7 +9,8 @@ jdk:
 before_script:
   - docker login -e="$DOCKER_EMAIL" -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
 script:
-  - sbt clean test compile api/docker:publish -Dversion=$TRAVIS_BUILD_NUMBER.$TRAVIS_COMMIT
+  - sbt clean test compile
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then sbt api/docker:publish -Dversion=$TRAVIS_BUILD_NUMBER.$TRAVIS_COMMIT; fi
   # Tricks to avoid unnecessary cache updates
   - find $HOME/.sbt -name "*.lock" | xargs rm
   - find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
