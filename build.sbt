@@ -38,8 +38,7 @@ lazy val api = project.in(file("src/api"))
     dockerExposedPorts := Seq(9000),
     dockerBaseImage := "janlisse/java-8-server",
     dockerUpdateLatest := true,
-    dockerRepository := Some("608300940987.dkr.ecr.eu-west-1.amazonaws.com"),
-    packageName in Docker := "ecdc",
+    packageName in Docker := "trademachines/ecdc",
     libraryDependencies ++= Seq(
       "commons-codec" % "commons-codec" % "1.10",
       "org.scaldi" %% "scaldi-play" % "0.5.10",
