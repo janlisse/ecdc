@@ -9,8 +9,8 @@ import com.amazonaws.services.s3.model.{ CryptoConfiguration, KMSEncryptionMater
 import ecdc.core.{ FileSystemTaskDefinitionResolver, TaskDefinitionResolver }
 import ecdc.aws.ecs.EcsClient
 import ecdc.aws.s3.S3EncryptedKeyProvider
-import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider }
-import ecdc.git.Git.{ Password, User, RepoUri }
+import ecdc.crypto.{ CmsDecryptor, SecretKeyProvider, TextDecryptor }
+import ecdc.git.Git.{ Password, RepoUri, User }
 import ecdc.git.Git
 import scaldi.Module
 
@@ -47,12 +47,12 @@ class ApplicationModule extends Module {
     inject[AmazonS3EncryptionClient]
   )
 
-  bind[CmsDecryptor] to new CmsDecryptor(
+  bind[TextDecryptor] to new CmsDecryptor(
     inject[SecretKeyProvider]
   )
 
   bind[TaskDefinitionResolver] to new FileSystemTaskDefinitionResolver()(
-    inject[CmsDecryptor]
+    inject[TextDecryptor]
   )
 
   bind[AWSCredentials] to new BasicAWSCredentials(

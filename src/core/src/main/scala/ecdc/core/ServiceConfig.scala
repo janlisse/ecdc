@@ -96,7 +96,7 @@ object ServiceConfig {
   def applyTraits(traits: Seq[ServiceTrait], baseConfig: Config, repoDir: File, cluster: Cluster) = {
     traits.foldLeft(baseConfig) {
       case (acc, t) =>
-        val path = s"trait/${t.name}/cluster/${cluster.name}/service.conf"
+        val path = PathResolver.serviceConfFile(t, cluster)
         val confFile = new File(repoDir, path)
         if (confFile.exists()) {
           acc.withFallback(ConfigFactory.parseFile(confFile))
