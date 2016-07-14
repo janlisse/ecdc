@@ -2,6 +2,7 @@ package ecdc.core
 
 import java.io.File
 import java.util
+import java.util.regex.Pattern
 
 import com.typesafe.config.ConfigFactory
 import model.{ Cluster, Service }
@@ -36,7 +37,7 @@ object TraitReader {
 
   val logger = LoggerFactory.getLogger(getClass)
   def getServiceTrait(t: String, repoDir: File): Option[ServiceTrait] = {
-    t.split("->", 2).toList match {
+    t.split(Pattern.quote("->"), 2).toList match {
       case n :: Nil if traitDirExists(repoDir, n) => Some(DefaultServiceTrait(n))
       case n :: c :: Nil if traitDirExists(repoDir, n, Cluster(c)) => Some(ServiceTraitWithFixedCluster(n, Cluster(c)))
       case _ =>
