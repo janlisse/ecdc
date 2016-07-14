@@ -8,7 +8,8 @@ import org.json4s.native.Serialization._
 case class TaskDef(
     family: String,
     containerDefinitions: Seq[ContainerDefinition],
-    volumes: Seq[Volume] = Nil) {
+    volumes: Seq[Volume] = Nil,
+    taskRoleArn: Option[String] = None) {
   def toJson: String = writePretty(this)(TaskDef.Implicits.formats)
 }
 

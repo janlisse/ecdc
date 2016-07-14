@@ -87,7 +87,9 @@ object ServiceConfig {
           .map(Host)
       )
     )
-    TaskDef(service.name, containerDefinitions, volumes)
+    val taskRole = conf.getStringOptional("taskRoleArn")
+
+    TaskDef(service.name, containerDefinitions, volumes, taskRole)
   }
 
   private def resolveConfig(service: Service, cluster: Cluster, repoDir: File,
