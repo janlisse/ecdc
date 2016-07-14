@@ -48,6 +48,7 @@ object TaskDef {
     memory: Int,
     links: Seq[String] = Nil,
     portMappings: Seq[PortMapping] = Nil,
+    logConfiguration: Option[LogConfiguration] = None,
     essential: Boolean = true,
     entryPoint: Seq[String] = Nil,
     command: Seq[String] = Nil,
@@ -110,4 +111,6 @@ object TaskDef {
   case class Volume(name: String, host: Option[Host] = None)
 
   case class Host(sourcePath: Option[String] = None)
+
+  case class LogConfiguration(logDriver: String, options: Map[String, String])
 }

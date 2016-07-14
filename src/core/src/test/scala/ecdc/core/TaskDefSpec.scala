@@ -25,7 +25,8 @@ class TaskDefSpec extends Spec {
         environment = Seq(Environment(name = "PATH", value = "/bin")),
         mountPoints = Seq(MountPoint(sourceVolume = "/source", containerPath = "/container", readOnly = true)),
         ulimits = Seq(Ulimit(softLimit = 4096, hardLimit = 8192, name = "nofile")),
-        volumesFrom = Seq(VolumeFrom(sourceContainer = "container", readOnly = true))
+        volumesFrom = Seq(VolumeFrom(sourceContainer = "container", readOnly = true)),
+        logConfiguration = Some(LogConfiguration(logDriver = "awslogs", options = Map("awslogs-group" -> "awslogs-test", "awslogs-region" -> "eu-west-1")))
       )),
       volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath")))))
     )) + "\n" shouldBe readFile("/ecdc/core/taskdef.complete.json").mkString
