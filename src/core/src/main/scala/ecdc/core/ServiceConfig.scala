@@ -1,7 +1,8 @@
 package ecdc.core
 
 import java.io.File
-import ecdc.core.TaskDef.PortMapping.{ Tcp, Protocol }
+
+import ecdc.core.TaskDef.PortMapping.{ Protocol, Tcp }
 import ecdc.core.TaskDef._
 import ecdc.core.TaskDef.ContainerDefinition.Image
 import model.{ Cluster, Service, Version }
@@ -70,7 +71,13 @@ object ServiceConfig {
             cfg.getInt("softLimit"),
             cfg.getInt("hardLimit")
           )
-        })
+        }),
+      logConfiguration = conf.getConfigOptional("logConfiguration").map(cfg => {
+        LogConfiguration(
+          logDriver = cfg.getString("logDriver"),
+          options = cfg.getConfig("options").entrySet().asScala.map(e => e.getKey -> e.getValue.unwrapped().toString).toMap
+        )
+      })
     ))
     val volumes = conf.getConfigSeq("volumes").map(
       volConfig => Volume(

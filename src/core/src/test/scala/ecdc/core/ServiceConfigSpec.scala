@@ -3,8 +3,8 @@ package ecdc.core
 import java.io.File
 
 import com.typesafe.config.ConfigFactory
-import ecdc.core.TaskDef.Environment
-import model.{ Service, Cluster, Version }
+import ecdc.core.TaskDef.{ Environment, LogConfiguration }
+import model.{ Cluster, Service, Version }
 import testutils.Spec
 
 class ServiceConfigSpec extends Spec {
@@ -71,6 +71,15 @@ class ServiceConfigSpec extends Spec {
     val td = sc.taskDefinition
 
     td.containerDefinitions.head.image.tag shouldBe "45.crazysha1"
+  }
 
+  it should "extract log configuration" in {
+    val sc = ServiceConfig.read(Service("bar"), cluster, Version.latest, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val cd = sc.taskDefinition.containerDefinitions.head
+
+    cd.logConfiguration shouldBe Some(LogConfiguration(
+      logDriver = "awslogs",
+      options = Map("awslogs-group" -> "awslogs-test", "awslogs-region" -> "eu-west-1")
+    ))
   }
 }

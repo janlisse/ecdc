@@ -184,7 +184,11 @@ object DeployController {
         //.withHostname(???)
         .withImage(cd.image.toString)
         //.withLinks(???)
-        //.withLogConfiguration(???)
+        .withLogConfiguration(cd.logConfiguration.map(l =>
+          new LogConfiguration()
+            .withLogDriver(l.logDriver)
+            .withOptions(l.options)
+        ).orNull)
         .withMemory(cd.memory)
         .withMountPoints(cd.mountPoints.map(mp =>
           new MountPoint().withContainerPath(mp.containerPath)
