@@ -28,7 +28,8 @@ class TaskDefSpec extends Spec {
         volumesFrom = Seq(VolumeFrom(sourceContainer = "container", readOnly = true)),
         logConfiguration = Some(LogConfiguration(logDriver = "awslogs", options = Map("awslogs-group" -> "awslogs-test", "awslogs-region" -> "eu-west-1")))
       )),
-      volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath")))))
+      volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath"))))),
+      taskRoleArn = Some("arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn")
     )) + "\n" shouldBe readFile("/ecdc/core/taskdef.complete.json").mkString
   }
 

@@ -13,6 +13,7 @@ class ServiceConfigSpec extends Spec {
   val service = Service("foo")
   val cluster = Cluster("production")
   val version = Version.latest
+  private val defaultVars = Map("MEMORY" -> "1024", "CLUSTER" -> "production")
 
   it should "apply traits to service.conf" in {
     val baseConf = ConfigFactory.parseFile(baseDir.toPath.resolve(s"service/${service.name}/service.conf").toFile)
@@ -21,14 +22,14 @@ class ServiceConfigSpec extends Spec {
   }
 
   it should "replace taskdef placeholders with variables" in {
-    val sc = ServiceConfig.read(service, cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val sc = ServiceConfig.read(service, cluster, version, baseDir, defaultVars, Nil)
     val td = sc.taskDefinition
     td.containerDefinitions.head.memory shouldBe 1024
     td.containerDefinitions.head.command shouldBe Seq("-Dlogger.resource=production/logback.xml")
   }
 
   it should "add all variables as environment vars" in {
-    val sc = ServiceConfig.read(service, cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val sc = ServiceConfig.read(service, cluster, version, baseDir, defaultVars, Nil)
     val td = sc.taskDefinition
     td.containerDefinitions.head.environment shouldBe Seq(
       Environment("MEMORY", "1024"),
@@ -36,7 +37,7 @@ class ServiceConfigSpec extends Spec {
   }
 
   it should "tolerate missing service.conf" in {
-    val sc = ServiceConfig.read(Service("baz"), cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Seq(DefaultServiceTrait("webapp")))
+    val sc = ServiceConfig.read(Service("baz"), cluster, version, baseDir, defaultVars, Seq(DefaultServiceTrait("webapp")))
     val td = sc.taskDefinition
     td.containerDefinitions.head.environment shouldBe Seq(
       Environment("MEMORY", "1024"),
@@ -44,7 +45,7 @@ class ServiceConfigSpec extends Spec {
   }
 
   it should "read loadBalancer config" in {
-    val sc = ServiceConfig.read(Service("bar"), cluster, version, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val sc = ServiceConfig.read(Service("bar"), cluster, version, baseDir, defaultVars, Nil)
     val lb = sc.loadBalancer
     lb shouldBe Some(LoadBalancer(
       instancePort = 9007,
@@ -67,19 +68,35 @@ class ServiceConfigSpec extends Spec {
 
   it should "use the specified version" in {
     val specificVersion = Version("45.crazysha1")
-    val sc = ServiceConfig.read(Service("bar"), cluster, specificVersion, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val sc = ServiceConfig.read(Service("bar"), cluster, specificVersion, baseDir, defaultVars, Nil)
     val td = sc.taskDefinition
 
     td.containerDefinitions.head.image.tag shouldBe "45.crazysha1"
   }
 
   it should "extract log configuration" in {
-    val sc = ServiceConfig.read(Service("bar"), cluster, Version.latest, baseDir, Map("MEMORY" -> "1024", "CLUSTER" -> "production"), Nil)
+    val sc = ServiceConfig.read(Service("bar"), cluster, Version.latest, baseDir, defaultVars, Nil)
     val cd = sc.taskDefinition.containerDefinitions.head
 
     cd.logConfiguration shouldBe Some(LogConfiguration(
       logDriver = "awslogs",
       options = Map("awslogs-group" -> "awslogs-test", "awslogs-region" -> "eu-west-1")
     ))
+  }
+
+  behavior of "taskRoleArn handling"
+
+  it should "do not use role arn if missing" in {
+    val sc = ServiceConfig.read(Service("bar"), cluster, Version.latest, baseDir, defaultVars, Nil)
+    val td = sc.taskDefinition
+
+    td.taskRoleArn shouldBe None
+  }
+
+  it should "use a role arn if provided" in {
+    val sc = ServiceConfig.read(Service("with-role"), cluster, Version.latest, baseDir, defaultVars, Nil)
+    val td = sc.taskDefinition
+
+    td.taskRoleArn shouldEqual Some("arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn")
   }
 }

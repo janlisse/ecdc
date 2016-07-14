@@ -65,5 +65,6 @@
         "sourcePath":"hostSourcePath"
       }
     }
-  ]
+  ],
+  "taskRoleArn":"arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn"
 }
