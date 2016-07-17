@@ -222,5 +222,6 @@ object DeployController {
         ).orNull)
         .withName(vol.name)
     ))
+    res.withTaskRoleArn(taskDef.taskRoleArn.orNull)
   }
 }
