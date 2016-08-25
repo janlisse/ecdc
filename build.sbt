@@ -65,7 +65,7 @@ lazy val `aws-s3` = project.in(file("src/aws-s3"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-s3" % "1.11.17",
+      "com.amazonaws" % "aws-java-sdk-s3" % "1.11.29",
       "commons-io" % "commons-io" % "2.4"
     )
   )
@@ -74,8 +74,8 @@ lazy val `aws-ecs` = project.in(file("src/aws-ecs"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-ecs" % "1.11.17",
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.11.17",
+      "com.amazonaws" % "aws-java-sdk-ecs" % "1.11.29",
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.11.29",
       "com.typesafe.play" %% "play-json" % "2.4.3"
     )
   )
