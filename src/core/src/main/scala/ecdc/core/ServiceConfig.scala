@@ -12,16 +12,18 @@ import scala.collection.JavaConverters._
 import com.typesafe.config.{ Config, ConfigFactory }
 
 case class ServiceConfig(taskDefinition: TaskDef, desiredCount: Option[Int], loadBalancer: Option[LoadBalancer])
+
 case class LoadBalancer(instancePort: Int, loadBalancerPort: Int,
   protocol: String, instanceProtocol: String, scheme: String, serviceRole: String, subnets: Seq[String],
   securityGroups: Seq[String], healthCheck: HealthCheck)
+
 case class HealthCheck(target: String, healthyThreshold: Int,
   unhealthyThreshold: Int, interval: Int, timeout: Int)
 
 object ServiceConfig {
 
   def read(service: Service, cluster: Cluster, version: Version, repoDir: File,
-    variables: Map[String, String], traits: Seq[ServiceTrait]): ServiceConfig = {
+    variables: Map[String, String], traits: Seq[ServiceTrait] = Seq.empty): ServiceConfig = {
 
     val conf = resolveConfig(service, cluster, repoDir, variables, traits)
     val taskDefinition = readTaskDef(conf, service, version, variables)
@@ -32,19 +34,22 @@ object ServiceConfig {
   }
 
   private def readTaskDef(conf: Config, service: Service, version: Version, variables: Map[String, String]) = {
-    val containerDefinitions: Seq[ContainerDefinition] = Seq(ContainerDefinition(
-      name = service.name,
+    val containerDefinitions = (conf.getConfigSeq("containerDefinitions") match {
+      case Nil => Seq(conf)
+      case x => x
+    }).map(cfg => ContainerDefinition(
+      name = cfg.getStringOptional("name").getOrElse(service.name),
       image = {
-        val imgConf = conf.getConfig("image")
+        val imgConf = cfg.getConfig("image")
         Image(
           imgConf.getStringOptional("repositoryUrl"),
           imgConf.getStringOptional("name").getOrElse(service.name),
-          version.value
+          imgConf.getStringOptional("version").getOrElse(version.value)
         )
       },
-      cpu = conf.getIntOptional("cpu"),
-      memory = conf.getInt("memory"),
-      portMappings = conf.getConfigSeq("portMappings").map(cfg =>
+      cpu = cfg.getIntOptional("cpu"),
+      memory = cfg.getInt("memory"),
+      portMappings = cfg.getConfigSeq("portMappings").map(cfg =>
         PortMapping(
           cfg.getInt("containerPort"),
           cfg.getIntOptional("hostPort"),
@@ -53,11 +58,11 @@ object ServiceConfig {
         )
       ),
       essential = true,
-      entryPoint = conf.getStringSeq("entryPoint"),
-      command = conf.getStringSeq("command"),
+      entryPoint = cfg.getStringSeq("entryPoint"),
+      command = cfg.getStringSeq("command"),
       environment = variables.map(v => Environment(v._1, v._2)).toSeq,
       mountPoints =
-        conf.getConfigSeq("mountPoints").map(cfg => {
+        cfg.getConfigSeq("mountPoints").map(cfg => {
           MountPoint(
             cfg.getString("sourceVolume"),
             cfg.getString("containerPath"),
@@ -65,20 +70,21 @@ object ServiceConfig {
           )
         }),
       ulimits =
-        conf.getConfigSeq("ulimits").map(cfg => {
+        cfg.getConfigSeq("ulimits").map(cfg => {
           Ulimit(
             cfg.getString("name"),
             cfg.getInt("softLimit"),
             cfg.getInt("hardLimit")
           )
         }),
-      logConfiguration = conf.getConfigOptional("logConfiguration").map(cfg => {
+      logConfiguration = cfg.getConfigOptional("logConfiguration").map(cfg => {
         LogConfiguration(
           logDriver = cfg.getString("logDriver"),
           options = cfg.getConfig("options").entrySet().asScala.map(e => e.getKey -> e.getValue.unwrapped().toString).toMap
         )
       })
     ))
+
     val volumes = conf.getConfigSeq("volumes").map(
       volConfig => Volume(
         volConfig.getString("name"),
