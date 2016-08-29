@@ -64,7 +64,7 @@ class TaskDefSpec extends Spec {
   it should "serialize a taskdef with multiple containers" in {
     writePretty(TaskDef(
       family = "abcFamily",
-      containerDefinitions = Seq(abcContainer),
+      containerDefinitions = Seq(abcContainer, xyzContainer),
       volumes = Seq(Volume(name = "volumeName", host = Some(Host(sourcePath = Some("hostSourcePath"))))),
       taskRoleArn = Some("arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn")
     )) + "\n" shouldBe readFile("/ecdc/core/taskdef.multiple-containers.json").mkString
