@@ -122,7 +122,7 @@ class ServiceConfigSpec extends Spec {
       'name("second"),
       'image(Image(Some("ecdc"), "oracle-jre", "8")),
       'memory(1024),
-      'essential(true),
+      'essential(false),
       'entryPoint(Seq("java")),
       'command(Seq("-Dfoo.bar=yeah")),
       'portMappings(Seq(PortMapping(containerPort = 9001)))

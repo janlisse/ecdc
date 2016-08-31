@@ -57,7 +57,7 @@ object ServiceConfig {
             .flatMap(Protocol.fromString).getOrElse(Tcp)
         )
       ),
-      essential = true,
+      essential = cfg.getBooleanOptional("essential").getOrElse(true),
       entryPoint = cfg.getStringSeq("entryPoint"),
       command = cfg.getStringSeq("command"),
       environment = variables.map(v => Environment(v._1, v._2)).toSeq,
