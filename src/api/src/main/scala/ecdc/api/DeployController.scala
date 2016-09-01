@@ -23,6 +23,8 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
   val logger = LoggerFactory.getLogger(getClass)
   implicit val timeout = Timeout(30.seconds)
 
+  def getLatestTaskdef(c: Cluster, s: Service) = getTaskdef(c, s, Version.latest)
+
   def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
     for {
       repoDir <- git.update()
