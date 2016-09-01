@@ -8,7 +8,8 @@ import org.json4s.native.Serialization._
 case class TaskDef(
     family: String,
     containerDefinitions: Seq[ContainerDefinition],
-    volumes: Seq[Volume] = Nil) {
+    volumes: Seq[Volume] = Nil,
+    taskRoleArn: Option[String] = None) {
   def toJson: String = writePretty(this)(TaskDef.Implicits.formats)
 }
 
@@ -48,6 +49,7 @@ object TaskDef {
     memory: Int,
     links: Seq[String] = Nil,
     portMappings: Seq[PortMapping] = Nil,
+    logConfiguration: Option[LogConfiguration] = None,
     essential: Boolean = true,
     entryPoint: Seq[String] = Nil,
     command: Seq[String] = Nil,
@@ -110,4 +112,6 @@ object TaskDef {
   case class Volume(name: String, host: Option[Host] = None)
 
   case class Host(sourcePath: Option[String] = None)
+
+  case class LogConfiguration(logDriver: String, options: Map[String, String])
 }

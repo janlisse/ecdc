@@ -1,8 +1,8 @@
 package ecdc
 
-import com.typesafe.config.Config
-import scala.collection.JavaConverters._
+import com.typesafe.config.{ Config, ConfigValue }
 
+import scala.collection.JavaConverters._
 import scala.util.Try
 
 package object core {
@@ -34,6 +34,8 @@ package object core {
     def getStringOptional(path: String): Option[String] = Try { cfg.getString(path) }.toOption
 
     def getIntOptional(path: String): Option[Int] = Try { cfg.getInt(path) }.toOption
+
+    def getValueOptional(path: String): Option[ConfigValue] = Try { cfg.getValue(path) }.toOption
 
     def getOneOf(path: String, values: String*): Option[String] = values
       .find(v => Try {
