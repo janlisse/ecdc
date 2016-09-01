@@ -11,6 +11,9 @@ case class TaskDef(
     volumes: Seq[Volume] = Nil,
     taskRoleArn: Option[String] = None) {
   def toJson: String = writePretty(this)(TaskDef.Implicits.formats)
+  def getLoadbalancedServiceContainer: Option[ContainerDefinition] = {
+    containerDefinitions.find(c => c.loadbalanced)
+  }
 }
 
 object TaskDef {
@@ -56,7 +59,8 @@ object TaskDef {
     environment: Seq[Environment] = Nil,
     mountPoints: Seq[MountPoint] = Nil,
     ulimits: Seq[Ulimit] = Nil,
-    volumesFrom: Seq[VolumeFrom] = Nil)
+    volumesFrom: Seq[VolumeFrom] = Nil,
+    loadbalanced: Boolean = false)
 
   object ContainerDefinition {
     case class Image(respositoryUrl: Option[String] = None, name: String, tag: String) {

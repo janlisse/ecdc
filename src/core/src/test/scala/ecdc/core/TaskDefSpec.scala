@@ -10,6 +10,7 @@ import TaskDef.Implicits._
 class TaskDefSpec extends Spec {
 
   val abcContainer = ContainerDefinition(
+    loadbalanced = false,
     name = "abcName",
     image = Image(respositoryUrl = Some("quay.io"), name = "imageName", tag = "latest"),
     cpu = Some(5),

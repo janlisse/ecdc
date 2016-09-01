@@ -55,7 +55,8 @@
           "sourceContainer":"container",
           "readOnly":true
         }
-      ]
+      ],
+      "loadbalanced":false
     },
     {
       "name":"xyzName",
@@ -99,7 +100,8 @@
           "sourceContainer":"container",
           "readOnly":true
         }
-      ]
+      ],
+      "loadbalanced":false
     }
   ],
   "volumes":[

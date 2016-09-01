@@ -121,7 +121,10 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
         csr.withLoadBalancers(
           new LoadBalancer()
             .withLoadBalancerName(loadBalancerName)
-            .withContainerName(service.name)
+            .withContainerName(serviceConfig.taskDefinition.getLoadbalancedServiceContainer match {
+              case None => service.name
+              case Some(c) => c.name
+            })
             .withContainerPort(serviceConfig.taskDefinition.containerDefinitions.head.portMappings.head.containerPort)
         ).withRole(lb.serviceRole))
       ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine

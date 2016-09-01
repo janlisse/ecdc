@@ -5,7 +5,8 @@
       "name":"123Name",
       "image":"anotherImage:1.1",
       "memory":512,
-      "essential":true
+      "essential":true,
+      "loadbalanced":false
     }
   ]
 }
