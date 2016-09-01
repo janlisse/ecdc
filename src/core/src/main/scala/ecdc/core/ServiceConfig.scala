@@ -84,7 +84,8 @@ object ServiceConfig {
             logDriver = cfg.getString("logDriver"),
             options = cfg.getConfig("options").entrySet().asScala.map(e => e.getKey -> e.getValue.unwrapped().toString).toMap
           )
-        })
+        }),
+        links = cfg.getStringSeq("links")
       )
     }
 

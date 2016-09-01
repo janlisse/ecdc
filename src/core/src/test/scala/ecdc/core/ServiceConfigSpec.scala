@@ -101,6 +101,13 @@ class ServiceConfigSpec extends Spec {
     td.taskRoleArn shouldEqual Some("arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn")
   }
 
+  it should "read links" in {
+    val sc = ServiceConfig.read(Service("with-links"), cluster, Version.latest, baseDir, defaultVars)
+    val td = sc.taskDefinition
+
+    td.containerDefinitions.head.links shouldEqual Seq("first", "second:alias")
+  }
+
   behavior of "multiple containers"
 
   it should "extract multiple container definitions from list" in {

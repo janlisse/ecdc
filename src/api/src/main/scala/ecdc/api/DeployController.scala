@@ -185,7 +185,7 @@ object DeployController {
         //.withExtraHosts(???)
         //.withHostname(???)
         .withImage(cd.image.toString)
-        //.withLinks(???)
+        .withLinks(cd.links)
         .withLogConfiguration(cd.logConfiguration.map(l =>
           new LogConfiguration()
             .withLogDriver(l.logDriver)
@@ -210,7 +210,6 @@ object DeployController {
         ))
     //.withPrivileged(???)
     //.withReadonlyRootFilesystem(???)
-    //.withUlimits()
     //.withUser(???)
     //.withVolumesFrom(???)
     //.withWorkingDirectory(???)
