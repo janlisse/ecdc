@@ -101,7 +101,9 @@ class ServiceConfigSpec extends Spec {
     td.taskRoleArn shouldEqual Some("arn:aws:iam::xxxxxxxxxxxx:role/test-task-role-arn")
   }
 
-  it should "extract multiple container definitions" in {
+  behavior of "multiple containers"
+
+  it should "extract multiple container definitions from list" in {
     val sc = ServiceConfig.read(Service("multiple-containers"), cluster, Version.latest, baseDir, defaultVars)
     val td = sc.taskDefinition
 
@@ -120,6 +122,34 @@ class ServiceConfigSpec extends Spec {
 
     second should have(
       'name("second"),
+      'image(Image(Some("ecdc"), "oracle-jre", "8")),
+      'memory(1024),
+      'essential(false),
+      'entryPoint(Seq("java")),
+      'command(Seq("-Dfoo.bar=yeah")),
+      'portMappings(Seq(PortMapping(containerPort = 9001)))
+    )
+  }
+
+  it should "extract multiple named container definitions stretching over service and trait" in {
+    val sc = ServiceConfig.read(Service("named-container"), cluster, Version.latest, baseDir, defaultVars, Seq(DefaultServiceTrait("monitoring")))
+    val td = sc.taskDefinition
+
+    td.containerDefinitions should have size 2
+    val second +: first +: Nil = td.containerDefinitions
+
+    first should have(
+      'name("first"),
+      'image(Image(Some("ecdc"), "node", Version.latest.value)),
+      'memory(1024),
+      'essential(true),
+      'entryPoint(Seq("node")),
+      'command(Seq("script.js")),
+      'portMappings(Seq(PortMapping(containerPort = 9000)))
+    )
+
+    second should have(
+      'name("third"),
       'image(Image(Some("ecdc"), "oracle-jre", "8")),
       'memory(1024),
       'essential(false),
