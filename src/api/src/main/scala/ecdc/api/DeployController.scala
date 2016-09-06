@@ -71,7 +71,10 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
 
     def createServiceStack(service: Service, cluster: Cluster, serviceConfig: ServiceConfig,
       desiredCount: Option[Int], lastDesiredCount: Int): Future[Unit] = {
-      val loadBalancerName = s"${service.name}-${cluster.name}"
+
+      val loadBalancerName = serviceConfig.loadBalancer
+        .flatMap(lb => lb.name)
+        .getOrElse(s"${service.name}-${cluster.name}")
       for {
         lbResult <- createLoadBalancer(loadBalancerName, service, serviceConfig.loadBalancer)
         lbHealthCheckResult <- configureLbHealthCheck(loadBalancerName, service, serviceConfig.loadBalancer.map(_.healthCheck))

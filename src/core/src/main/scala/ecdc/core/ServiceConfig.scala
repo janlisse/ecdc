@@ -12,9 +12,17 @@ import com.typesafe.config._
 
 case class ServiceConfig(taskDefinition: TaskDef, desiredCount: Option[Int], loadBalancer: Option[LoadBalancer])
 
-case class LoadBalancer(instancePort: Int, loadBalancerPort: Int,
-  protocol: String, instanceProtocol: String, scheme: String, serviceRole: String, subnets: Seq[String],
-  securityGroups: Seq[String], healthCheck: HealthCheck)
+case class LoadBalancer(
+  instancePort: Int,
+  loadBalancerPort: Int,
+  protocol: String,
+  instanceProtocol: String,
+  scheme: String,
+  serviceRole: String,
+  subnets: Seq[String],
+  securityGroups: Seq[String],
+  healthCheck: HealthCheck,
+  name: Option[String] = None)
 
 case class HealthCheck(target: String, healthyThreshold: Int,
   unhealthyThreshold: Int, interval: Int, timeout: Int)
@@ -156,7 +164,11 @@ object ServiceConfig {
       val subnets = lb.getStringList("subnets").asScala
       val securityGroups = lb.getStringList("securityGroups").asScala
       val role = lb.getString("serviceRole")
-      LoadBalancer(instancePort, port, protocol, instanceProtocol, scheme, role, subnets, securityGroups, healthCheck)
+      val name = lb.getStringOptional("name")
+      LoadBalancer(
+        instancePort, port, protocol, instanceProtocol, scheme, role,
+        subnets, securityGroups, healthCheck, name
+      )
     }
   }
 
