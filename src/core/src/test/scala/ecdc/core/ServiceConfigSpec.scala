@@ -4,9 +4,10 @@ import java.io.File
 
 import com.typesafe.config.ConfigFactory
 import ecdc.core.TaskDef.ContainerDefinition.Image
-import ecdc.core.TaskDef.{ Environment, LogConfiguration, PortMapping }
+import ecdc.core.TaskDef._
 import model.{ Cluster, Service, Version }
 import testutils.Spec
+import testutils.ServiceConfigUtils._
 
 class ServiceConfigSpec extends Spec {
 
@@ -83,6 +84,18 @@ class ServiceConfigSpec extends Spec {
       logDriver = "awslogs",
       options = Map("awslogs-group" -> "awslogs-test", "awslogs-region" -> "eu-west-1")
     ))
+  }
+
+  it should "extract volumes configuration" in {
+    val sc = ServiceConfig.read(Service("with-volumes"), cluster, Version.latest, baseDir, defaultVars)
+    val td = sc.taskDefinition
+
+    td.containerDefinitions should have size 2
+    val first = td.containerByName("first")
+    val second = td.containerByName("second")
+
+    first.volumesFrom shouldBe Nil
+    second.volumesFrom shouldBe Seq(VolumeFrom(sourceContainer = "first", readOnly = false))
   }
 
   behavior of "taskRoleArn handling"
