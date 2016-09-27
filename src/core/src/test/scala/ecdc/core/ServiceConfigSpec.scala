@@ -38,6 +38,18 @@ class ServiceConfigSpec extends Spec {
       Environment("CLUSTER", "production"))
   }
 
+  it should "merge variables from container definition" in {
+    val sc = ServiceConfig.read(Service("with-environment-vars"), cluster, version, baseDir, defaultVars)
+    val td = sc.taskDefinition
+
+    td.containerDefinitions.head.environment shouldBe Seq(
+      Environment("MEMORY", "1024"),
+      Environment("CLUSTER", "production"),
+      Environment("ONE", "two"),
+      Environment("FOO", "bar")
+    )
+  }
+
   it should "tolerate missing service.conf" in {
     val sc = ServiceConfig.read(Service("baz"), cluster, version, baseDir, defaultVars, Seq(DefaultServiceTrait("webapp")))
     val td = sc.taskDefinition

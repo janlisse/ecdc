@@ -41,5 +41,9 @@ package object core {
       .find(v => Try {
         cfg.getString(path)
       }.toOption.contains(v))
+
+    def toMap: Map[String, String] = {
+      cfg.entrySet().asScala.map(e => e.getKey -> e.getValue.unwrapped().toString).toMap
+    }
   }
 }

@@ -94,6 +94,10 @@ object ServiceConfig {
     def buildContainerDefinition(conf: (Config, String)): ContainerDefinition = {
       val cfg = conf._1
       val name = conf._2
+      val containerVars = (variables ++ (cfg.getConfigOptional("environment") match {
+        case None => Seq.empty
+        case Some(x) => x.toMap
+      })).map(v => Environment(v._1, v._2)).toSeq
 
       ContainerDefinition(
         loadbalanced = cfg.getBooleanOptional("loadbalanced").getOrElse(false),
@@ -105,14 +109,14 @@ object ServiceConfig {
         essential = cfg.getBooleanOptional("essential").getOrElse(true),
         entryPoint = cfg.getStringSeq("entryPoint"),
         command = cfg.getStringSeq("command"),
-        environment = variables.map(v => Environment(v._1, v._2)).toSeq,
+        environment = containerVars,
         mountPoints = buildMountPoints(cfg.getConfigSeq("mountPoints")),
         ulimits = buildUlimits(cfg.getConfigSeq("ulimits")),
         volumesFrom = buildVolumesFrom(cfg.getConfigSeq("volumesFrom")),
         logConfiguration = cfg.getConfigOptional("logConfiguration").map(cfg => {
           LogConfiguration(
             logDriver = cfg.getString("logDriver"),
-            options = cfg.getConfig("options").entrySet().asScala.map(e => e.getKey -> e.getValue.unwrapped().toString).toMap
+            options = cfg.getConfig("options").toMap
           )
         }),
         links = cfg.getStringSeq("links")
