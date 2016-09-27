@@ -71,6 +71,7 @@ object ServiceConfig {
         )
       })
     }
+
     def buildUlimits(ulimitConf: Seq[Config]): Seq[Ulimit] = {
       ulimitConf.map(cfg => {
         Ulimit(
@@ -79,6 +80,15 @@ object ServiceConfig {
           cfg.getInt("hardLimit")
         )
       })
+    }
+
+    def buildVolumesFrom(volumesFromConf: Seq[Config]): Seq[VolumeFrom] = {
+      volumesFromConf.map(cfg =>
+        VolumeFrom(
+          cfg.getString("sourceContainer"),
+          cfg.getBooleanOptional("readonly").getOrElse(false)
+        )
+      )
     }
 
     def buildContainerDefinition(conf: (Config, String)): ContainerDefinition = {
@@ -98,6 +108,7 @@ object ServiceConfig {
         environment = variables.map(v => Environment(v._1, v._2)).toSeq,
         mountPoints = buildMountPoints(cfg.getConfigSeq("mountPoints")),
         ulimits = buildUlimits(cfg.getConfigSeq("ulimits")),
+        volumesFrom = buildVolumesFrom(cfg.getConfigSeq("volumesFrom")),
         logConfiguration = cfg.getConfigOptional("logConfiguration").map(cfg => {
           LogConfiguration(
             logDriver = cfg.getString("logDriver"),

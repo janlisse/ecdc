@@ -207,6 +207,11 @@ object DeployController {
             .withSoftLimit(ul.softLimit)
             .withHardLimit(ul.hardLimit))
         )
+        .withVolumesFrom(cd.volumesFrom.map(vf =>
+          new VolumeFrom()
+            .withSourceContainer(vf.sourceContainer)
+            .withReadOnly(vf.readOnly))
+        )
         .withName(cd.name)
         .withPortMappings(cd.portMappings.map(p =>
           new PortMapping()
@@ -217,7 +222,6 @@ object DeployController {
     //.withPrivileged(???)
     //.withReadonlyRootFilesystem(???)
     //.withUser(???)
-    //.withVolumesFrom(???)
     //.withWorkingDirectory(???)
     ))
     res.withFamily(taskDef.family)
