@@ -120,16 +120,20 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
         .withServiceName(service.name)
         .withTaskDefinition(taskDefArn.value)
         .withDesiredCount(getDesiredCount(desiredCount, lastDesiredCount))
+      val loadbalancedContainer = serviceConfig.taskDefinition.getLoadbalancedServiceContainer match {
+        case None => serviceConfig.taskDefinition.containerDefinitions.head
+        case Some(c) => c
+      }
       val withLb = serviceConfig.loadBalancer.fold(csr)(lb =>
         csr.withLoadBalancers(
           new LoadBalancer()
             .withLoadBalancerName(loadBalancerName)
-            .withContainerName(serviceConfig.taskDefinition.getLoadbalancedServiceContainer match {
-              case None => service.name
-              case Some(c) => c.name
-            })
-            .withContainerPort(serviceConfig.taskDefinition.containerDefinitions.head.portMappings.head.containerPort)
+            .withContainerName(loadbalancedContainer.name)
+            .withContainerPort(loadbalancedContainer.portMappings.head.containerPort)
         ).withRole(lb.serviceRole))
+
+      logger.info(s"Creating loadbalancer with name $loadBalancerName pointing to ${loadbalancedContainer.name}")
+
       ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine
     }
 
