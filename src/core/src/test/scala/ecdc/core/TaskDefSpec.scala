@@ -14,7 +14,7 @@ class TaskDefSpec extends Spec {
     name = "abcName",
     image = Image(respositoryUrl = Some("quay.io"), name = "imageName", tag = "latest"),
     cpu = Some(5),
-    memory = 1024,
+    memory = Some(1024),
     links = Seq("link"),
     portMappings = Seq(PortMapping(containerPort = 80, hostPort = Some(9000), protocol = Udp)),
     essential = false,
@@ -31,7 +31,7 @@ class TaskDefSpec extends Spec {
     name = "xyzName",
     image = Image(respositoryUrl = Some("quay.io"), name = "otherImageName", tag = "1.2.3"),
     cpu = Some(10),
-    memory = 512,
+    memory = Some(512),
     links = Seq("other-link"),
     portMappings = Seq(PortMapping(containerPort = 80, hostPort = Some(8000), protocol = Tcp)),
     essential = false,
@@ -57,7 +57,7 @@ class TaskDefSpec extends Spec {
       containerDefinitions = Seq(ContainerDefinition(
         name = "123Name",
         image = Image(name = "anotherImage", tag = "1.1"),
-        memory = 512
+        memory = Some(512)
       ))
     )) + "\n" shouldBe readFile("/ecdc/core/taskdef.minimal.json").mkString
   }

@@ -32,11 +32,12 @@ object RegisterTaskDefinitionReads {
     (__ \ 'image).read[String] and
     (__ \ 'cpu).read[Int] and
     (__ \ 'memory).read[Int] and
+    (__ \ 'memoryReservation).read[Int] and
     (__ \ 'essential).read[Boolean] and
     (__ \ 'command).read[Seq[String]] and
     (__ \ 'environment).read[Seq[KeyValuePair]] and
     (__ \ 'portMappings).readNullable[Seq[PortMapping]]
-  )((name: String, image: String, cpu: Int, memory: Int,
+  )((name: String, image: String, cpu: Int, memory: Int, memoryReservation: Int,
       essential: Boolean, command: Seq[String], environment: Seq[KeyValuePair],
       portMappings: Option[Seq[PortMapping]]) ⇒ {
       val cd = new ContainerDefinition()
@@ -44,6 +45,7 @@ object RegisterTaskDefinitionReads {
       cd.setImage(image)
       cd.setCpu(cpu)
       cd.setMemory(memory)
+      cd.setMemoryReservation(memory)
       cd.setEssential(essential)
       cd.setCommand(command.asJava)
       cd.setEnvironment(environment.asJava)

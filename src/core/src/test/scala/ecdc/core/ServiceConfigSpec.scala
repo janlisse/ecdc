@@ -26,7 +26,7 @@ class ServiceConfigSpec extends Spec {
   it should "replace taskdef placeholders with variables" in {
     val sc = ServiceConfig.read(service, cluster, version, baseDir, defaultVars)
     val td = sc.taskDefinition
-    td.containerDefinitions.head.memory shouldBe 1024
+    td.containerDefinitions.head.memory shouldBe Some(1024)
     td.containerDefinitions.head.command shouldBe Seq("-Dlogger.resource=production/logback.xml")
   }
 
@@ -145,7 +145,7 @@ class ServiceConfigSpec extends Spec {
     first should have(
       'name("first"),
       'image(Image(Some("ecdc"), "node", Version.latest.value)),
-      'memory(1024),
+      'memory(Some(1024)),
       'essential(true),
       'entryPoint(Seq("node")),
       'command(Seq("script.js")),
@@ -155,7 +155,7 @@ class ServiceConfigSpec extends Spec {
     second should have(
       'name("second"),
       'image(Image(Some("ecdc"), "oracle-jre", "8")),
-      'memory(1024),
+      'memory(Some(1024)),
       'essential(false),
       'entryPoint(Seq("java")),
       'command(Seq("-Dfoo.bar=yeah")),
@@ -173,7 +173,7 @@ class ServiceConfigSpec extends Spec {
     first should have(
       'name("first"),
       'image(Image(Some("ecdc"), "node", Version.latest.value)),
-      'memory(1024),
+      'memory(Some(1024)),
       'essential(true),
       'entryPoint(Seq("node")),
       'command(Seq("script.js")),
@@ -183,11 +183,29 @@ class ServiceConfigSpec extends Spec {
     second should have(
       'name("third"),
       'image(Image(Some("ecdc"), "oracle-jre", "8")),
-      'memory(1024),
+      'memory(Some(1024)),
       'essential(false),
       'entryPoint(Seq("java")),
       'command(Seq("-Dfoo.bar=yeah")),
       'portMappings(Seq(PortMapping(containerPort = 9001)))
+    )
+  }
+
+  it should "not extract memory" in {
+    val sc = ServiceConfig.read(Service("without-memory"), cluster, Version.latest, baseDir, defaultVars)
+    val cd = sc.taskDefinition.containerDefinitions.head
+
+    cd should have(
+      'memory(None)
+    )
+  }
+
+  it should "extract memory reservation" in {
+    val sc = ServiceConfig.read(Service("with-memory-reservation"), cluster, Version.latest, baseDir, defaultVars)
+    val cd = sc.taskDefinition.containerDefinitions.head
+
+    cd should have(
+      'memoryReservation(Some(2611))
     )
   }
 }
