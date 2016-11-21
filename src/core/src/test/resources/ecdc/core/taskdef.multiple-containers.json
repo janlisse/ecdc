@@ -57,6 +57,51 @@
         }
       ],
       "loadbalanced":false
+    },
+    {
+      "name":"xyzName",
+      "image":"quay.io/otherImageName:1.2.3",
+      "cpu":10,
+      "memory":512,
+      "links":[
+        "other-link"
+      ],
+      "portMappings":[
+        {
+          "containerPort":80,
+          "hostPort":8000,
+          "protocol":"tcp"
+        }
+      ],
+      "essential":false,
+      "entryPoint":[
+        "/bin/entrypoint"
+      ],
+      "command":[
+        "arg1",
+        "arg2"
+      ],
+      "mountPoints":[
+        {
+          "sourceVolume":"/source",
+          "containerPath":"/container",
+          "readOnly":true
+        }
+      ],
+      "ulimits":[
+        {
+          "name":"nofile",
+          "softLimit":4096,
+          "hardLimit":8192
+        }
+      ],
+      "volumesFrom":[
+        {
+          "sourceContainer":"container",
+          "readOnly":true
+        }
+      ],
+      "loadbalanced":false
     }
   ],
   "volumes":[

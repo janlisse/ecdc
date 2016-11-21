@@ -8,7 +8,7 @@ name := "ecdc"
 lazy val commonSettings = Seq(
   resolvers += "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases",
   resolvers += "oncue-bintray" at "http://dl.bintray.com/oncue/releases",
-  organization := "com.github.janlisse",
+  organization := "com.trademachines",
   version := sys.props.getOrElse("version", default = "0"),
   scalaVersion := "2.11.7",
   ScalariformKeys.preferences := ScalariformKeys.preferences.value
@@ -38,7 +38,7 @@ lazy val api = project.in(file("src/api"))
     dockerExposedPorts := Seq(9000),
     dockerBaseImage := "janlisse/java-8-server",
     dockerUpdateLatest := true,
-    packageName in Docker := "janlisse/ecdc",
+    packageName in Docker := "trademachines/ecdc",
     libraryDependencies ++= Seq(
       "commons-codec" % "commons-codec" % "1.10",
       "org.scaldi" %% "scaldi-play" % "0.5.10",
@@ -65,7 +65,7 @@ lazy val `aws-s3` = project.in(file("src/aws-s3"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-s3" % "1.10.32",
+      "com.amazonaws" % "aws-java-sdk-s3" % "1.11.29",
       "commons-io" % "commons-io" % "2.4"
     )
   )
@@ -74,8 +74,8 @@ lazy val `aws-ecs` = project.in(file("src/aws-ecs"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-java-sdk-ecs" % "1.10.32",
-      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.10.32",
+      "com.amazonaws" % "aws-java-sdk-ecs" % "1.11.29",
+      "com.amazonaws" % "aws-java-sdk-elasticloadbalancing" % "1.11.29",
       "com.typesafe.play" %% "play-json" % "2.4.3"
     )
   )

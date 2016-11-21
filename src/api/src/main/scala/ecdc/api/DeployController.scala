@@ -23,6 +23,8 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
   val logger = LoggerFactory.getLogger(getClass)
   implicit val timeout = Timeout(30.seconds)
 
+  def getLatestTaskdef(c: Cluster, s: Service) = getTaskdef(c, s, Version.latest)
+
   def getTaskdef(cluster: Cluster, service: Service, version: Version) = Action.async {
     for {
       repoDir <- git.update()
@@ -69,7 +71,10 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
 
     def createServiceStack(service: Service, cluster: Cluster, serviceConfig: ServiceConfig,
       desiredCount: Option[Int], lastDesiredCount: Int): Future[Unit] = {
-      val loadBalancerName = s"${service.name}-${cluster.name}"
+
+      val loadBalancerName = serviceConfig.loadBalancer
+        .flatMap(lb => lb.name)
+        .getOrElse(s"${service.name}-${cluster.name}")
       for {
         lbResult <- createLoadBalancer(loadBalancerName, service, serviceConfig.loadBalancer)
         lbHealthCheckResult <- configureLbHealthCheck(loadBalancerName, service, serviceConfig.loadBalancer.map(_.healthCheck))
@@ -115,13 +120,20 @@ class DeployController(ecsClient: EcsClient, configResolver: TaskDefinitionResol
         .withServiceName(service.name)
         .withTaskDefinition(taskDefArn.value)
         .withDesiredCount(getDesiredCount(desiredCount, lastDesiredCount))
+      val loadbalancedContainer = serviceConfig.taskDefinition.getLoadbalancedServiceContainer match {
+        case None => serviceConfig.taskDefinition.containerDefinitions.head
+        case Some(c) => c
+      }
       val withLb = serviceConfig.loadBalancer.fold(csr)(lb =>
         csr.withLoadBalancers(
           new LoadBalancer()
             .withLoadBalancerName(loadBalancerName)
-            .withContainerName(service.name)
-            .withContainerPort(serviceConfig.taskDefinition.containerDefinitions.head.portMappings.head.containerPort)
+            .withContainerName(loadbalancedContainer.name)
+            .withContainerPort(loadbalancedContainer.portMappings.head.containerPort)
         ).withRole(lb.serviceRole))
+
+      logger.info(s"Creating loadbalancer with name $loadBalancerName pointing to ${loadbalancedContainer.name}")
+
       ecsClient.createService(withLb).map(_ => ()) //TODO figure out how to test if deployment went fine
     }
 
@@ -183,8 +195,12 @@ object DeployController {
         //.withExtraHosts(???)
         //.withHostname(???)
         .withImage(cd.image.toString)
-        //.withLinks(???)
-        //.withLogConfiguration(???)
+        .withLinks(cd.links)
+        .withLogConfiguration(cd.logConfiguration.map(l =>
+          new LogConfiguration()
+            .withLogDriver(l.logDriver)
+            .withOptions(l.options)
+        ).orNull)
         .withMemory(cd.memory)
         .withMountPoints(cd.mountPoints.map(mp =>
           new MountPoint().withContainerPath(mp.containerPath)
@@ -195,6 +211,11 @@ object DeployController {
             .withSoftLimit(ul.softLimit)
             .withHardLimit(ul.hardLimit))
         )
+        .withVolumesFrom(cd.volumesFrom.map(vf =>
+          new VolumeFrom()
+            .withSourceContainer(vf.sourceContainer)
+            .withReadOnly(vf.readOnly))
+        )
         .withName(cd.name)
         .withPortMappings(cd.portMappings.map(p =>
           new PortMapping()
@@ -204,9 +225,7 @@ object DeployController {
         ))
     //.withPrivileged(???)
     //.withReadonlyRootFilesystem(???)
-    //.withUlimits()
     //.withUser(???)
-    //.withVolumesFrom(???)
     //.withWorkingDirectory(???)
     ))
     res.withFamily(taskDef.family)
@@ -218,5 +237,6 @@ object DeployController {
         ).orNull)
         .withName(vol.name)
     ))
+    res.withTaskRoleArn(taskDef.taskRoleArn.orNull)
   }
 }
